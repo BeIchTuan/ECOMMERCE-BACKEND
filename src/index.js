@@ -2,23 +2,28 @@ const express = require('express')
 const dotenv = require('dotenv')
 const morgan = require('morgan');
 const { MongoClient } = require('mongodb');
+const routes = require('./routes');
 const app = express()
+const bodyParser = require('body-parser')
 
 dotenv.config()
 app.use(morgan('combined'));
 const port = process.env.PORT || 3001
 
+app.use(bodyParser.json())
+
 app.get('/', (req, res) => {
   res.send('Hello world!')
 })
+
+routes(app);
 
 async function main(){
   /**
    * Connection URI. Update <username>, <password>, and <your-cluster-url> to reflect your cluster.
    * See https://docs.mongodb.com/ecosystem/drivers/node/ for more details
    */
-  const uri = "mongodb+srv://hoangvanluong:hvl123456@ecommerce.ko8pa.mongodb.net/sample_airbnb?retryWrites=true&w=majority";
-
+  const uri = process.env.MONGO_URI;
 
   const client = new MongoClient(uri);
 
@@ -44,5 +49,5 @@ async function listDatabases(client){
 };
 
 app.listen(port, () => {
-  console.log(`Example app listening on port ${port}`)
+  console.log(`Example app listening on port ${port}`);
 })
