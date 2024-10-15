@@ -1,53 +1,64 @@
-const express = require('express')
-const dotenv = require('dotenv')
+const express = require('express');
+const dotenv = require('dotenv');
 const morgan = require('morgan');
 const { MongoClient } = require('mongodb');
 const routes = require('./routes');
-const app = express()
-const bodyParser = require('body-parser')
+const app = express();
+const bodyParser = require('body-parser');
+const mongoose = require('mongoose');
 
-dotenv.config()
+dotenv.config();
 app.use(morgan('combined'));
-const port = process.env.PORT || 3001
 
-app.use(bodyParser.json())
+const port = process.env.PORT || 3001;
+app.use(bodyParser.json());
 
 app.get('/', (req, res) => {
-  res.send('Hello world!')
-})
+  res.send('Hello world!');
+});
 
 routes(app);
 
-async function main(){
-  /**
-   * Connection URI. Update <username>, <password>, and <your-cluster-url> to reflect your cluster.
-   * See https://docs.mongodb.com/ecosystem/drivers/node/ for more details
-   */
-  const uri = process.env.MONGO_URI;
+mongoose.connect(process.env.MONGO_URI)
+  .then(() => {
+    console.log('Mongoose connected to MongoDB');
+    // Now, you can safely start your server and perform database operations
+    app.listen(port, () => {
+      console.log(`App listening on port ${port}`);
+    });
+  })
+  .catch(err => {
+    console.error('Mongoose connection error:', err);
+  });
 
-  const client = new MongoClient(uri);
+// async function main() {
+//   const uri = process.env.MONGO_URI;
 
-  try {
-      // Connect to the MongoDB cluster
-      await client.connect();
+//   // Add useNewUrlParser and useUnifiedTopology options for MongoDB driver
+//   const client = new MongoClient(uri);
 
-      // Make the appropriate DB calls
-      await  listDatabases(client);
+//   try {
+//     console.log('Attempting to connect to MongoDB...');
+//     await client.connect();
+//     console.log('Successfully connected to MongoDB!');
 
-  } catch (e) {
-      console.error(e);
-  } finally {
-      await client.close();
-  }
-}
+//     // Make the appropriate DB calls
+//     await listDatabases(client);
+//   } catch (e) {
+//     console.error('Failed to connect to MongoDB:', e.message);
+//   } finally {
+//     await client.close();
+//   }
+// }
 
-main().catch(console.error);
-async function listDatabases(client){
-  databasesList = await client.db().admin().listDatabases();
-  console.log("Databases:");
-  databasesList.databases.forEach(db => console.log(` - ${db.name}`));
-};
+// main().catch(console.error);
 
-app.listen(port, () => {
-  console.log(`Example app listening on port ${port}`);
-})
+// async function listDatabases(client) {
+//   const databasesList = await client.db().admin().listDatabases();
+//   console.log('Databases:');
+//   databasesList.databases.forEach(db => console.log(` - ${db.name}`));
+// }
+
+// app.listen(port, () => {
+//   console.log(`App listening on port ${port}`);
+// });
