@@ -1,7 +1,7 @@
 const UserRouter = require('./UserRouter')
 
 const routes = (app) => {
-    app.use('/api/user', UserRouter)
+    app.use('/auth/register', UserRouter)
 }
 
 module.exports = routes
