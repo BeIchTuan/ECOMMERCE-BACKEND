@@ -1,5 +1,6 @@
 const User = require("../models/UserModel");
 const bcrypt = require("bcrypt"); // For password hashing
+const { generalAccessToken, generalRefreshToken } = require('./Jwtservice');
 
 const createUser = (newUser) => {
   return new Promise(async (resolve, reject) => {
@@ -73,6 +74,55 @@ const createUser = (newUser) => {
   });
 };
 
+const loginUser = (userLogin) => {
+  return new Promise(async (resolve, reject) => {
+    const { email, password} = userLogin;
+
+    try {
+      const checkUser = await User.findOne({
+        email: email,
+      });
+
+      if (checkUser === null) {
+        resolve({
+          status: "error",
+          message: "The user is not defined",
+        });
+      }
+
+      const comparePassword = bcrypt.compareSync(password, checkUser.password);
+
+      if (!comparePassword) {
+        resolve({
+          status: "error",
+          message: "Invalid email or password",
+        });
+      }
+
+      const access_token = await generalAccessToken({
+        id: checkUser.id,
+        role: checkUser.role
+      })
+
+      const refresh_token = await generalRefreshToken({
+        id: checkUser.id,
+        role: checkUser.role
+      })
+
+      resolve({
+        status: "success",
+        message: "Login successful",
+        access_token: access_token,
+        refresh_token: refresh_token
+      });
+
+    } catch (e) {
+      reject(e);
+    }
+  });
+};
+
 module.exports = {
   createUser,
+  loginUser,
 };
