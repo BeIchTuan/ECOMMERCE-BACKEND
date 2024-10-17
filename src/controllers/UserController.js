@@ -62,7 +62,31 @@ const loginUser = async(req, res) => {
     }
 }
 
+const updateUser = async(req, res) => {
+    try{
+        const userId = req.params.id
+        const data = req.body
+
+        if(!userId){
+            return res.status(200).json({
+                status: 'error',
+                message: 'userID is required'
+            })
+        }
+
+        const response = await UserService.updateUser(userId, data);
+        return res.status(200).json(response);
+
+    } catch(e) {
+        return res.status(500).json({
+            message: 'Internal server error',
+            error: e.toString()
+        });
+    }
+}
+
 module.exports = {
     createUser,
-    loginUser
+    loginUser,
+    updateUser
 }
