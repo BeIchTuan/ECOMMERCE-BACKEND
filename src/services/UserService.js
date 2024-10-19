@@ -121,7 +121,7 @@ const loginUser = (userLogin) => {
         role: checkUser.role,
       });
 
-      console.log(access_token)
+      console.log(access_token);
 
       resolve({
         status: "success",
@@ -129,7 +129,6 @@ const loginUser = (userLogin) => {
         role: checkUser.role,
         access_token: access_token,
       });
-
     } catch (e) {
       reject(e);
     }
@@ -151,10 +150,12 @@ const updateUser = (id, data) => {
       }
 
       const updatedUser = await User.findByIdAndUpdate(id, data, { new: true });
-      //console.log('update user: ', updatedUser)
+
+      console.log('update user: ', updatedUser)
+
       resolve({
         status: "success",
-        message: "Login successful",
+        message: "Updated",
         data: updatedUser,
       });
     } catch (e) {
@@ -188,9 +189,50 @@ const deleteUser = (id, data) => {
   });
 };
 
+const getUser = (id) => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      const user = await User.findOne({
+        _id: id,
+      });
+
+      if (user === null) {
+        return resolve({
+          status: "error",
+          message: "User not found",
+        });
+      }
+
+       // Kiểm tra nếu address tồn tại và là một mảng
+      //  const address = Array.isArray(user.address) ? user.address.map(addr => ({
+      //   nameOfLocation: addr.nameOfLocation,
+      //   location: addr.location,
+      //   phone: addr.phone
+      // })) : [];
+
+      // Trả về dữ liệu từ cơ sở dữ liệu
+      resolve({
+        status: "success",
+        user: {
+          email: user.email,
+          name: user.name,
+          avatar: user.avatar, 
+          birthday: user.birthday, 
+          gender: user.gender,
+          phone: user.phone,
+          address: user.address
+          }
+      });
+    } catch (e) {
+      reject(e);
+    }
+  });
+};
+
 module.exports = {
   createUser,
   loginUser,
   updateUser,
   deleteUser,
+  getUser,
 };
