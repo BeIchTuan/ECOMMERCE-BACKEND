@@ -53,7 +53,24 @@ const loginUser = async(req, res) => {
         } 
         
         const response = await UserService.loginUser(req.body);
-        return res.status(200).json(response);
+        
+        if (response.status === 'success') {
+            res.cookie('accessToken', response.access_token, {
+                httpOnly: true,
+                //secure: process.env.NODE_ENV === 'production', // Chỉ sử dụng cookie secure trong môi trường production
+                maxAge: 3600000 // 1 giờ
+            });
+
+            return res.status(200).json({
+                message: 'Login successful',
+                role: response.role
+            });
+        } else {
+            return res.status(400).json({
+                status: 'error',
+                message: response.message
+            });
+        }
     } catch(e) {
         return res.status(500).json({
             message: 'Internal server error',
