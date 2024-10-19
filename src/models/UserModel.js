@@ -1,19 +1,28 @@
 const mongoose = require("mongoose");
-const userSchema = new mongoose.Schema(
+//const Address = require("./AddressModel");
+const Schema = mongoose.Schema;
+
+const userSchema = new Schema(
   {
-    email: { type: String, required: true},
+    email: { type: String, required: true },
     password: { type: String, required: true },
     name: { type: String, required: false },
     avatar: { type: String },
     birthday: { type: Date },
     gender: { type: String },
     phone: { type: String },
-    //address: [{ type: Schema.Types.ObjectId, ref: 'Address' }],
+    address: [
+      {
+        nameOfLocation: { type: String },
+        location: { type: String },
+        phone: { type: String },
+      }
+    ],
     role: {
-        type: String,
-        enum: ['user', 'seller'],
-        required: true,
-        default: 'user'
+      type: String,
+      enum: ["user", "seller"],
+      required: true,
+      default: "user",
     },
     rating: { type: Number },
     access_token: { type: String, require: true },
