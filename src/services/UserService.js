@@ -137,7 +137,7 @@ const updateUser = (id, data) => {
       }
 
       const updatedUser = await User.findByIdAndUpdate(id,data, {new: true})
-      console.log('update user: ', updatedUser)
+      //console.log('update user: ', updatedUser)
       resolve({
         status: "success",
         message: "Login successful",
@@ -150,8 +150,35 @@ const updateUser = (id, data) => {
   });
 };
 
+const deleteUser = (id, data) => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      const checkUser = await User.findOne({
+        _id: id
+      });
+
+      if (checkUser === null) {
+        resolve({
+          status: "error",
+          message: "The user is not defined",
+        });
+      }
+
+      await User.findByIdAndDelete(id)
+      resolve({
+        status: "success",
+        message: "Delete success",
+      });
+
+    } catch (e) {
+      reject(e);
+    }
+  });
+};
+
 module.exports = {
   createUser,
   loginUser,
-  updateUser
+  updateUser,
+  deleteUser
 };
