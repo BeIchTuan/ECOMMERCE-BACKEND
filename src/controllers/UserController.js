@@ -85,8 +85,31 @@ const updateUser = async(req, res) => {
     }
 }
 
+const deleteUser = async(req, res) => {
+    try{
+        const userId = req.params.id
+
+        if(!userId){
+            return res.status(200).json({
+                status: 'error',
+                message: 'userID is required'
+            })
+        }
+
+        const response = await UserService.deleteUser(userId);
+        return res.status(200).json(response);
+
+    } catch(e) {
+        return res.status(500).json({
+            message: 'Internal server error',
+            error: e.toString()
+        });
+    }
+}
+
 module.exports = {
     createUser,
     loginUser,
-    updateUser
+    updateUser,
+    deleteUser
 }
