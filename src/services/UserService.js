@@ -1,6 +1,6 @@
 const User = require("../models/UserModel");
 const bcrypt = require("bcrypt"); // For password hashing
-const { generalAccessToken, generalRefreshToken } = require('./Jwtservice');
+const { generalAccessToken, generalRefreshToken } = require("./Jwtservice");
 
 const createUser = (newUser) => {
   return new Promise(async (resolve, reject) => {
@@ -76,7 +76,7 @@ const createUser = (newUser) => {
 
 const loginUser = (userLogin) => {
   return new Promise(async (resolve, reject) => {
-    const { email, password} = userLogin;
+    const { email, password } = userLogin;
 
     try {
       const checkUser = await User.findOne({
@@ -99,21 +99,35 @@ const loginUser = (userLogin) => {
         });
       }
 
+      // const access_token = await generalAccessToken({
+      //   id: checkUser.id,
+      //   role: checkUser.role
+      // })
+
+      // const refresh_token = await generalRefreshToken({
+      //   id: checkUser.id,
+      //   role: checkUser.role
+      // })
+
+      // resolve({
+      //   status: "success",
+      //   message: "Login successful",
+      //   access_token: access_token,
+      //   refresh_token: refresh_token
+      // });
+
       const access_token = await generalAccessToken({
         id: checkUser.id,
-        role: checkUser.role
-      })
+        role: checkUser.role,
+      });
 
-      const refresh_token = await generalRefreshToken({
-        id: checkUser.id,
-        role: checkUser.role
-      })
+      console.log(access_token)
 
       resolve({
         status: "success",
         message: "Login successful",
+        role: checkUser.role,
         access_token: access_token,
-        refresh_token: refresh_token
       });
 
     } catch (e) {
@@ -126,7 +140,7 @@ const updateUser = (id, data) => {
   return new Promise(async (resolve, reject) => {
     try {
       const checkUser = await User.findOne({
-        _id: id
+        _id: id,
       });
 
       if (checkUser === null) {
@@ -136,14 +150,13 @@ const updateUser = (id, data) => {
         });
       }
 
-      const updatedUser = await User.findByIdAndUpdate(id,data, {new: true})
+      const updatedUser = await User.findByIdAndUpdate(id, data, { new: true });
       //console.log('update user: ', updatedUser)
       resolve({
         status: "success",
         message: "Login successful",
-        data: updatedUser
+        data: updatedUser,
       });
-
     } catch (e) {
       reject(e);
     }
@@ -154,7 +167,7 @@ const deleteUser = (id, data) => {
   return new Promise(async (resolve, reject) => {
     try {
       const checkUser = await User.findOne({
-        _id: id
+        _id: id,
       });
 
       if (checkUser === null) {
@@ -164,12 +177,11 @@ const deleteUser = (id, data) => {
         });
       }
 
-      await User.findByIdAndDelete(id)
+      await User.findByIdAndDelete(id);
       resolve({
         status: "success",
         message: "Delete success",
       });
-
     } catch (e) {
       reject(e);
     }
@@ -180,5 +192,5 @@ module.exports = {
   createUser,
   loginUser,
   updateUser,
-  deleteUser
+  deleteUser,
 };
