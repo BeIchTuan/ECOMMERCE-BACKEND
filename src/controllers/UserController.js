@@ -62,8 +62,10 @@ const loginUser = async(req, res) => {
             });
 
             return res.status(200).json({
+                status: 'success',
                 message: 'Login successful',
-                role: response.role
+                role: response.role,
+                token: response.access_token
             });
         } else {
             return res.status(400).json({
@@ -124,9 +126,32 @@ const deleteUser = async(req, res) => {
     }
 }
 
+const getUser = async(req, res) => {
+    try{
+        const userId = req.params.id
+
+        if(!userId){
+            return res.status(200).json({
+                status: 'error',
+                message: 'userID is required'
+            })
+        }
+
+        const response = await UserService.getUser(userId);
+        return res.status(200).json(response);
+
+    } catch(e) {
+        return res.status(500).json({
+            message: 'Internal server error',
+            error: e.toString()
+        });
+    }
+}
+
 module.exports = {
     createUser,
     loginUser,
     updateUser,
-    deleteUser
+    deleteUser,
+    getUser
 }
