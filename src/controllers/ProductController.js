@@ -4,7 +4,7 @@ const ProductService = require("../services/ProductService");
 class ProductController {
   // Tạo sản phẩm mới
   async createProduct(req, res) {
-    const { name, price, inStock, category, SKU } = req.body;
+    const { name, price, inStock, description, category, SKU, image } = req.body;
 
     // Kiểm tra nếu các trường bắt buộc chưa được nhập
     if (!name || !price || !inStock || !SKU || !category) {
