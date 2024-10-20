@@ -6,9 +6,12 @@ const routes = require('./routes');
 const app = express();
 const bodyParser = require('body-parser');
 const mongoose = require('mongoose');
+const cookieParser = require('cookie-parser');
 
 dotenv.config();
 app.use(morgan('combined'));
+
+app.use(cookieParser());
 
 const port = process.env.PORT || 3001;
 app.use(bodyParser.json());
