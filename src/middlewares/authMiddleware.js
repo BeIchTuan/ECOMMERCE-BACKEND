@@ -6,7 +6,7 @@ dotenv.config()
 // Middleware xác thực và phân quyền
 const authMiddleware = (allowedRoles = []) => {
     return async (req, res, next) => {
-        const { accessToken } = req.cookies;
+        const accessToken = req.cookies?.accessToken;
 
         if (!accessToken) {
             return res.status(409).json({ error: 'Please Login First' });
@@ -14,6 +14,8 @@ const authMiddleware = (allowedRoles = []) => {
             try {
                 // Giải mã token
                 const deCodeToken = await jwt.verify(accessToken, process.env.ACCESS_TOKEN);
+
+                //console.log('Decoded Token:', deCodeToken);
 
                 // Lưu thông tin người dùng vào request
                 req.role = deCodeToken.role;
