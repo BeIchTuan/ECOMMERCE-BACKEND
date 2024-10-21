@@ -21,7 +21,8 @@ const productSchema = new Schema({
     image: [{ type: String,  required: true }],
     //discount: { type: Schema.Types.ObjectId, ref: 'Discount' },
     //rates: [{ type: Schema.Types.ObjectId, ref: 'Rate' }],
-    rate: { type: Number, default: 0 } 
+    rate: { type: Number, default: 0 },
+    seller: { type: Schema.Types.ObjectId, ref: 'User'},
 });
 
 const Product = mongoose.model("Product", productSchema);
