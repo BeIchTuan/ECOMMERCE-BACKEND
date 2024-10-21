@@ -3,7 +3,7 @@ const ProductService = require("../services/ProductService");
 
 class ProductController {
   // Tạo sản phẩm mới
-  async createProduct(req, res) {
+  async createProduct(req, res) {    
     const { name, price, inStock, description, category, SKU, image } = req.body;
 
     // Kiểm tra nếu các trường bắt buộc chưa được nhập
@@ -15,20 +15,23 @@ class ProductController {
     }
 
     try {
-      const product = await ProductService.createProduct(req.body);
+      const sellerId = req.id; // Lấy sellerId từ token đã xác thực
+
+      const product = await ProductService.createProduct(req.body, sellerId);
       return res.status(201).json({
         status: "success",
         message: "Product added successfully",
         productId: product._id,
       });
     } catch (error) {
-      return res.status(500).json({ message: error.message });
+      return res.status(500).json({ 
+        message: error.message });
     }
   }
 
   // Cập nhật sản phẩm
   async updateProduct(req, res) {
-    const { name, price, inStock, category, SKU } = req.body;
+    const { name, price, inStock, description, category, SKU, image } = req.body;
 
     // Kiểm tra nếu các trường bắt buộc chưa được nhập
     if (!name || !price || !inStock || !SKU || !category) {

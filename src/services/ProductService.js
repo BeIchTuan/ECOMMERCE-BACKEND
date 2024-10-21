@@ -2,12 +2,17 @@ const Product = require("../models/ProductModel");
 
 class ProductService {
   // Tạo sản phẩm mới
-  async createProduct(data) {
+  async createProduct(data, sellerId) {
     try {
-      const product = new Product(data);
-      return await product.save();
+      const newProduct = new Product({
+        ...data,
+        seller: sellerId
+      });
+      
+      return await newProduct.save();
+
     } catch (error) {
-      throw new Error(error.message);
+      throw new Error('Error creating product: ' + error.message);
     }
   }
 
