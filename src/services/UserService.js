@@ -121,12 +121,31 @@ const loginUser = (userLogin) => {
         role: checkUser.role,
       });
 
+      // Trường hợp nếu người dùng có vai trò là seller
+      let shopInfo = {};
+      if (checkUser.role === "seller") {
+        shopInfo = {
+          shopName: checkUser.shopName,
+          shopDescription: checkUser.shopDescription,
+          shopAddress: checkUser.shopAddress,
+        };
+      }
+
       resolve({
         status: "success",
         message: "Login successful",
+        userId: checkUser._id,
         role: checkUser.role,
+        name: checkUser.name,
+        avatar: checkUser.avatar,
+        birthday: checkUser.birthday,
+        gender: checkUser.gender,
+        phone: checkUser.phone,
+        address: checkUser.address,
         access_token: access_token,
+        ...shopInfo, // Thêm thông tin cửa hàng nếu có
       });
+
     } catch (e) {
       reject(e);
     }
@@ -190,9 +209,7 @@ const deleteUser = (id, data) => {
 const getUser = (id) => {
   return new Promise(async (resolve, reject) => {
     try {
-      const user = await User.findOne({
-        _id: id,
-      });
+      const user = await User.findOne({ _id: id });
 
       if (user === null) {
         return resolve({
@@ -201,26 +218,30 @@ const getUser = (id) => {
         });
       }
 
-       // Kiểm tra nếu address tồn tại và là một mảng
-      //  const address = Array.isArray(user.address) ? user.address.map(addr => ({
-      //   nameOfLocation: addr.nameOfLocation,
-      //   location: addr.location,
-      //   phone: addr.phone
-      // })) : [];
+      // Dữ liệu chung cho tất cả người dùng
+      const userData = {
+        email: user.email,
+        name: user.name,
+        avatar: user.avatar,
+        birthday: user.birthday,
+        gender: user.gender,
+        phone: user.phone,
+        address: user.address
+      };
 
-      // Trả về dữ liệu từ cơ sở dữ liệu
+      // Nếu role là "seller", thêm các trường liên quan đến cửa hàng
+      if (user.role === "seller") {
+        userData.shopName = user.shopName;
+        userData.shopDescription = user.shopDescription;
+        userData.shopAddress = user.shopAddress;
+      }
+
+      // Trả về dữ liệu người dùng với thông tin bổ sung nếu là seller
       resolve({
         status: "success",
-        user: {
-          email: user.email,
-          name: user.name,
-          avatar: user.avatar, 
-          birthday: user.birthday, 
-          gender: user.gender,
-          phone: user.phone,
-          address: user.address
-          }
+        user: userData
       });
+
     } catch (e) {
       reject(e);
     }
