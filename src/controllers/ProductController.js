@@ -31,31 +31,41 @@ class ProductController {
 
   // Cập nhật sản phẩm
   async updateProduct(req, res) {
-    const { name, price, inStock, description, category, SKU, image } = req.body;
-
-    // Kiểm tra nếu các trường bắt buộc chưa được nhập
-    if (!name || !price || !inStock || !SKU || !category) {
-      return res.status(400).json({
-        status: "error",
-        message: "Name, price, inStock, SKU, and category are required fields!",
-      });
-    }
-
     try {
-      const product = await ProductService.updateProduct(
-        req.params.id,
-        req.body
-      );
-      if (!product) {
-        return res.status(404).json({ message: "Product not found" });
-      }
-      return res.status(200).json(product);
+      const sellerId = req.id; // Lấy sellerId từ token đã xác thực
+      const productId = req.params.id;
+
+      const product = await ProductService.updateProduct(productId, sellerId, req.body);
+      return res.status(200).json({
+        status: 'success',
+        message: "Product updated successfully",
+        data: product
+      });
     } catch (error) {
-      return res.status(500).json({ message: error.message });
+      return res.status(400).json({
+        status: 'error',
+        message: error.message
+      });
     }
   }
 
-  // Các phương thức khác...
+  // Xóa sản phẩm
+  async deleteProduct(req, res) {
+    try {
+      const sellerId = req.id; // Lấy sellerId từ token đã xác thực
+      const productId = req.params.id
+      await ProductService.deleteProduct(productId, sellerId);
+      return res.status(200).json({
+        status: 'success',
+        message: 'Product deleted successfully'
+      });
+    } catch (error) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Failed to delete product: ' + error.message
+      });
+    }
+  };
 }
 
 module.exports = new ProductController();
