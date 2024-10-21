@@ -7,11 +7,15 @@ const app = express();
 const bodyParser = require('body-parser');
 const mongoose = require('mongoose');
 const cookieParser = require('cookie-parser');
+const cors = require("cors");
 
 dotenv.config();
 app.use(morgan('combined'));
 
 app.use(cookieParser());
+
+// Sử dụng middleware cors
+app.use(cors());
 
 const port = process.env.PORT || 3001;
 app.use(bodyParser.json());
