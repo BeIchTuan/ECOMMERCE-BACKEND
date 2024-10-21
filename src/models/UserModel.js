@@ -2,6 +2,12 @@ const mongoose = require("mongoose");
 //const Address = require("./AddressModel");
 const Schema = mongoose.Schema;
 
+const addressSchema = new mongoose.Schema({
+  nameOfLocation: { type: String },
+  location: { type: String },
+  phone: { type: String },
+});
+
 const userSchema = new Schema(
   {
     email: { type: String, required: true },
@@ -11,13 +17,7 @@ const userSchema = new Schema(
     birthday: { type: Date },
     gender: { type: String },
     phone: { type: String },
-    address: [
-      {
-        nameOfLocation: { type: String },
-        location: { type: String },
-        phone: { type: String },
-      }
-    ],
+    address: [addressSchema],
     role: {
       type: String,
       enum: ["user", "seller"],
