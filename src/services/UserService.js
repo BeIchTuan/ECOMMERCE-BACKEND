@@ -121,8 +121,6 @@ const loginUser = (userLogin) => {
         role: checkUser.role,
       });
 
-      console.log(access_token);
-
       resolve({
         status: "success",
         message: "Login successful",

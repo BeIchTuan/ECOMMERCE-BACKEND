@@ -35,22 +35,43 @@ class ProductService {
   }
 
   // Cập nhật sản phẩm
-  async updateProduct(productId, data) {
+  async updateProduct(productId, sellerId, data) {
     try {
-      return await Product.findByIdAndUpdate(productId, data, { new: true });
+      const product = await Product.findById(productId);
+      if (!product) {
+        throw new Error('Product not found');
+      }
+  
+      if (product.seller.toString() !== sellerId) {
+        throw new Error('You are not authorized to update this product');
+      }
+  
+      Object.assign(product, data);
+      return await product.save();
     } catch (error) {
-      throw new Error(error.message);
+      throw new Error('Failed to update product: ' + error.message);
     }
-  }
+  };
 
   // Xóa sản phẩm
-  async deleteProduct(productId) {
+  async deleteProduct(productId, sellerId) {
     try {
-      return await Product.findByIdAndDelete(productId);
+      const product = await Product.findById(productId);
+      if (!product) {
+        throw new Error('Product not found');
+      }
+  
+      // Kiểm tra xem seller có phải là người sở hữu sản phẩm không
+      if (product.seller.toString() !== sellerId) {
+        throw new Error('You are not authorized to delete this product');
+      }
+  
+      // Xóa sản phẩm
+      return await Product.deleteOne({ _id: productId });
     } catch (error) {
-      throw new Error(error.message);
+      throw new Error('Error deleting product: ' + error.message);
     }
-  }
+  }  
 }
 
 module.exports = new ProductService();
