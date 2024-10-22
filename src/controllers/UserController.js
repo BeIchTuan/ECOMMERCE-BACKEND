@@ -1,6 +1,7 @@
 const { json } = require("body-parser");
-const jwt = require('jsonwebtoken');
+const jwt = require("jsonwebtoken");
 const UserService = require("../services/UserService");
+const User = require("../models/UserModel");
 
 const createUser = async (req, res) => {
   try {
@@ -75,8 +76,8 @@ const loginUser = async (req, res) => {
         maxAge: 3600000, // 1 hour
       });
 
-       // Chuẩn bị thông tin phản hồi cho người dùng
-       const userData = {
+      // Chuẩn bị thông tin phản hồi cho người dùng
+      const userData = {
         id: response.userId,
         email: email,
         role: response.role,
@@ -100,7 +101,7 @@ const loginUser = async (req, res) => {
         message: "Login successful",
         //role: response.role,
         token: accessToken,
-        user: userData
+        user: userData,
         // user: {
         //   id: response.userId,
         //   email: email,
@@ -133,10 +134,37 @@ const updateUser = async (req, res) => {
       });
     }
 
-    const response = await UserService.updateUser(userId, data);
+    // Tìm user theo ID trước để kiểm tra role
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        status: "error",
+        message: "User not found",
+      });
+    }
+
+    // Kiểm tra role của user và lọc dữ liệu cho phép cập nhật
+    let fieldsToUpdate = {};
+    if (user.role === "user") {
+      // Chỉ cho phép cập nhật các trường này cho người dùng có role là "user"
+      const { name, avatar, birthday, gender, phone, address } = data;
+      fieldsToUpdate = { name, avatar, birthday, gender, phone, address };
+    } else if (user.role === "seller") {
+      // Chỉ cho phép cập nhật các trường này cho người dùng có role là "seller"
+      const { shopName, shopDescription, shopAddress } = data;
+      fieldsToUpdate = { shopName, shopDescription, shopAddress };
+    } else {
+      return res.status(400).json({
+        status: "error",
+        message: "Invalid role",
+      });
+    }
+
+    const response = await UserService.updateUser(userId, fieldsToUpdate);
     return res.status(200).json({
       status: "success",
       message: "User updated successfully",
+      data: response.data
     });
   } catch (e) {
     return res.status(500).json({

@@ -43,8 +43,8 @@ const userSchema = new Schema(
         return this.role === "seller";
       },
     },
-    address: {
-      type: String,
+    shopAddress: {
+      type: [addressSchema],
       required: function () {
         return this.role === "seller";
       },
