@@ -43,12 +43,12 @@ const userSchema = new Schema(
         return this.role === "seller";
       },
     },
-    shopAddress: {
-      type: [addressSchema],
-      required: function () {
-        return this.role === "seller";
-      },
-    },
+    // shopAddress: {
+    //   type: [addressSchema],
+    //   required: function () {
+    //     return this.role === "seller";
+    //   },
+    // },
     createdAt: {
       type: Date,
       default: Date.now,
