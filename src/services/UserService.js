@@ -155,28 +155,45 @@ const loginUser = (userLogin) => {
 const updateUser = (id, data) => {
   return new Promise(async (resolve, reject) => {
     try {
-      const checkUser = await User.findOne({
-        _id: id,
-      });
+    //   const checkUser = await User.findOne({
+    //     _id: id,
+    //   });
 
-      if (checkUser === null) {
-        resolve({
-          status: "error",
-          message: "The user is not defined",
-        });
+    //   if (checkUser === null) {
+    //     resolve({
+    //       status: "error",
+    //       message: "The user is not defined",
+    //     });
+    //   }
+
+    //   const updatedUser = await User.findByIdAndUpdate(id, data, { new: true });
+
+    //   console.log('update user: ', updatedUser)
+
+    //   resolve({
+    //     status: "success",
+    //     message: "Updated",
+    //     data: updatedUser,
+    //   });
+    // } catch (e) {
+    //   reject(e);
+    // }
+    const user = await User.findById(id);
+      if (!user) {
+        throw new Error('User not found');
       }
 
-      const updatedUser = await User.findByIdAndUpdate(id, data, { new: true });
-
-      console.log('update user: ', updatedUser)
+      // Cập nhật các trường hợp lệ đã được lọc trong controller
+      Object.assign(user, data);
+      const updatedUser = await user.save();
 
       resolve({
         status: "success",
         message: "Updated",
         data: updatedUser,
       });
-    } catch (e) {
-      reject(e);
+    } catch (error) {
+      reject(new Error('Failed to update user: ' + error.message));
     }
   });
 };
