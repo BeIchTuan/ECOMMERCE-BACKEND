@@ -72,6 +72,22 @@ class ProductService {
       throw new Error('Error deleting product: ' + error.message);
     }
   }  
+
+  async getAllShopProducts(sellerId) {
+    try {
+      // Tìm tất cả sản phẩm của shop dựa trên sellerId
+      const products = await Product.find({ seller: sellerId });
+      
+      if (products.length === 0) {
+        throw new Error('No products found for this shop');
+      }
+  
+      return products;
+    } catch (error) {
+      throw new Error('Error retrieving products: ' + error.message);
+    }
+  }
+  
 }
 
 module.exports = new ProductService();
