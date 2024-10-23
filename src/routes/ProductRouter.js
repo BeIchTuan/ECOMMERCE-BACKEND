@@ -3,9 +3,9 @@ const router = express.Router()
 const productController = require('../controllers/ProductController')
 const { authMiddleware } = require('../middlewares/authMiddleware');
 
-router.post('/products', authMiddleware(['seller']),productController.createProduct);
-router.put('/products/:id', authMiddleware(['seller']),productController.updateProduct);
-router.delete('/products/:id', authMiddleware(['seller']),productController.deleteProduct);
-router.get('/products/:sellerId', authMiddleware(['seller', 'user']),productController.getAllShopProduct);
+router.post('/seller/products', authMiddleware(['seller']),productController.createProduct);
+router.put('/seller/products/:id', authMiddleware(['seller']),productController.updateProduct);
+router.delete('/seller/products/:id', authMiddleware(['seller']),productController.deleteProduct);
+router.get('/seller/products/:sellerId', productController.getAllShopProduct);
 
 module.exports = router
