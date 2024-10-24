@@ -73,6 +73,7 @@ const loginUser = async (req, res) => {
       // Lưu accessToken vào cookie
       res.cookie("accessToken", accessToken, {
         httpOnly: true,
+        secure: false,
         sameSite: 'None',
         maxAge: 3600000, // 1 hour
       });
