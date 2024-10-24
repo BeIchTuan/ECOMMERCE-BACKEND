@@ -15,7 +15,10 @@ app.use(morgan('combined'));
 app.use(cookieParser());
 
 // Sử dụng middleware cors
-app.use(cors());
+app.use(cors({
+  origin: 'http://localhost:5173/', // Thay bằng URL của frontend
+  credentials: true // Cho phép gửi cookie
+}));
 
 const port = process.env.PORT || 3001;
 app.use(bodyParser.json());
