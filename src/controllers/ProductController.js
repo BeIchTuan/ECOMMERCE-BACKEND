@@ -69,12 +69,30 @@ class ProductController {
 
   async getAllShopProduct(req, res) {
     try {
-      const sellerId = req.params.id; // Lấy sellerId từ token đã xác thực
+      const sellerId = req.params.id; // Lấy id seller
 
       const product = await ProductService.getAllShopProducts(sellerId);
       return res.status(200).json({
         status: 'success',
         message: "Get products successfully",
+        data: product
+      });
+    } catch (error) {
+      return res.status(400).json({
+        status: 'error',
+        message: error.message
+      });
+    }
+  };
+
+  async getProductDetails(req, res) {
+    try {
+      const productId = req.params.id; // Lấy sellerId
+
+      const product = await ProductService.getProductDetails(productId);
+      return res.status(200).json({
+        status: 'success',
+        message: "Get product details successfully",
         data: product
       });
     } catch (error) {

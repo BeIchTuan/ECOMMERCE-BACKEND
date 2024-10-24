@@ -26,7 +26,7 @@ class ProductService {
   }
 
   // Lấy sản phẩm theo ID
-  async getProductById(productId) {
+  async getProductDetails(productId) {
     try {
       return await Product.findById(productId);
     } catch (error) {
