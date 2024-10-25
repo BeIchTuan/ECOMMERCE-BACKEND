@@ -16,7 +16,7 @@ app.use(cookieParser());
 
 // Sử dụng middleware cors
 app.use(cors({
-  origin: 'http://localhost:5173/', // Thay bằng URL của frontend
+  origin: 'http://localhost:5173', // Thay bằng URL của frontend
   credentials: true // Cho phép gửi cookie
 }));
 
