@@ -22,22 +22,6 @@ const createUser = (newUser) => {
       // Hash the password before storing
       const hashedPassword = await bcrypt.hash(password, 10); // Use 10 as salt rounds for hashing
 
-      //     const createdUser = await User.create({
-      //         email,
-      //         password: hashedPassword
-      //     })
-
-      //     if (createdUser) {
-      //         resolve({
-      //             status: 'success',
-      //             message: 'User registered successfully',
-      //             data: createdUser
-      //         })
-      //     }
-      // } catch (e) {
-      //     reject(e)
-      // }
-
       const userData = {
         email,
         password: hashedPassword,
