@@ -14,11 +14,21 @@ app.use(morgan('combined'));
 
 app.use(cookieParser());
 
+const allowedOrigins = ["http://localhost:5173", "http://localhost:5174"];
+
 // Sử dụng middleware cors
-app.use(cors({
-  origin: 'http://localhost:5173', // Thay bằng URL của frontend
-  credentials: true // Cho phép gửi cookie
-}));
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
+    credentials: true, // Cho phép gửi cookie
+  })
+);
 
 const port = process.env.PORT || 3001;
 app.use(bodyParser.json());
