@@ -7,7 +7,7 @@ class CategoryController{
           return res.status(200).json({
             status: 'success',
             message: "Get categories successfully",
-            data: product
+            categories: product
           });
         } catch (error) {
           return res.status(400).json({
