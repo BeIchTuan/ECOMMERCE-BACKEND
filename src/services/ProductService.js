@@ -76,7 +76,7 @@ class ProductService {
   async getAllShopProducts(sellerId) {
     try {
       // Tìm tất cả sản phẩm của shop dựa trên sellerId
-      const products = await Product.find({ seller: sellerId });
+      const products = await Product.find({ seller: sellerId }).populate('category', 'name');;
       
       if (products.length === 0) {
         throw new Error('No products found for this shop');
