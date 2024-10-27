@@ -85,6 +85,22 @@ class ProductController {
     }
   };
 
+  //Lấy danh sách sản phẩm khuyến nghị cho khách hàng
+  async getRecommendedProducts(req, res) {
+    try {
+      const userId = req.id; // Lấy id user
+
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 15;
+
+      const result = await ProductService.getRecommendedProducts(page, limit, userId);
+      res.status(200).json(result);
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  }
+
+  //Lấy chi tiết sản phẩm
   async getProductDetails(req, res) {
     try {
       const productId = req.params.id; // Lấy sellerId

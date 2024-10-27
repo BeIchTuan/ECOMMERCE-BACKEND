@@ -1,4 +1,5 @@
 const Product = require("../models/ProductModel");
+const User = require("../models/UserModel");
 
 class ProductService {
   // Tạo sản phẩm mới
@@ -13,15 +14,6 @@ class ProductService {
 
     } catch (error) {
       throw new Error('Error creating product: ' + error.message);
-    }
-  }
-
-  // Lấy tất cả sản phẩm
-  async getProducts() {
-    try {
-      return await Product.find().populate('category', 'name');;
-    } catch (error) {
-      throw new Error(error.message);
     }
   }
 
@@ -73,6 +65,7 @@ class ProductService {
     }
   }  
 
+  // Lấy tất cả sản phẩm của shop
   async getAllShopProducts(sellerId) {
     try {
       // Tìm tất cả sản phẩm của shop dựa trên sellerId
@@ -85,6 +78,36 @@ class ProductService {
       return products;
     } catch (error) {
       throw new Error('Error retrieving products: ' + error.message);
+    }
+  }
+
+  //Lấy danh sách sản phẩm khuyến nghị cho khách hàng
+  async getRecommendedProducts(page = 1, limit = 15, userId) {
+    try {
+      const skip = (page - 1) * limit;
+
+      // Tìm người dùng và lấy danh sách danh mục yêu thích
+      const user = await User.findById(userId);
+      const favoriteCategories = user.favoriteCategories || []; // Giả sử `favoriteCategories` chứa danh sách các ObjectId của danh mục
+
+      // Lọc sản phẩm dựa trên danh mục yêu thích của người dùng
+      const products = await Product.find({ category: { $in: favoriteCategories } })
+        .skip(skip)
+        .limit(limit)
+        .populate('category', 'name'); // Lấy tên của category
+
+      // Đếm tổng số sản phẩm để tính tổng số trang
+      const totalProducts = await Product.countDocuments({ category: { $in: favoriteCategories } });
+      const totalPages = Math.ceil(totalProducts / limit);
+
+      return {
+        products,
+        currentPage: page,
+        totalPages,
+        totalProducts
+      };
+    } catch (error) {
+      throw new Error(error.message);
     }
   }
   

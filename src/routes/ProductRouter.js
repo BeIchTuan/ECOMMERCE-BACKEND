@@ -13,5 +13,11 @@ router.delete('/seller/products/:id', authMiddleware(['seller']),productControll
 router.get('/seller/products/:sellerId', productController.getAllShopProduct); 
 //Get product details
 router.get('/products/:id', productController.getProductDetails);
+//Get recommended products for user
+router.get('/user/products/:userId', authMiddleware(['user']), productController.getRecommendedProducts);
+
+
+
+
 
 module.exports = router
