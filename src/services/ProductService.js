@@ -19,7 +19,7 @@ class ProductService {
   // Lấy tất cả sản phẩm
   async getProducts() {
     try {
-      return await Product.find();
+      return await Product.find().populate('category', 'name');;
     } catch (error) {
       throw new Error(error.message);
     }

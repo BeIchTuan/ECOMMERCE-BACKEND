@@ -66,7 +66,7 @@ class ProductController {
       });
     }
   };
-
+  //Lấy tất cả sản phẩm trong shop
   async getAllShopProduct(req, res) {
     try {
       const sellerId = req.params.id; // Lấy id seller
