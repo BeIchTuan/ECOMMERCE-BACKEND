@@ -28,7 +28,7 @@ class ProductService {
   // Lấy sản phẩm theo ID
   async getProductDetails(productId) {
     try {
-      return await Product.findById(productId);
+      return await Product.findById(productId).populate('category', 'name');;
     } catch (error) {
       throw new Error(error.message);
     }
