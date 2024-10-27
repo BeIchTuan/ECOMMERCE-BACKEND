@@ -39,7 +39,7 @@ class ProductController {
       return res.status(200).json({
         status: 'success',
         message: "Product updated successfully",
-        data: product
+        product: product
       });
     } catch (error) {
       return res.status(400).json({
@@ -75,7 +75,7 @@ class ProductController {
       return res.status(200).json({
         status: 'success',
         message: "Get products successfully",
-        data: product
+        products: product
       });
     } catch (error) {
       return res.status(400).json({
