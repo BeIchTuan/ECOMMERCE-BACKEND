@@ -105,6 +105,8 @@ const loginUser = (userLogin) => {
         role: checkUser.role,
       });
 
+      //console.log('service', access_token)
+
       // Trường hợp nếu người dùng có vai trò là seller
       let shopInfo = {};
       if (checkUser.role === "seller") {

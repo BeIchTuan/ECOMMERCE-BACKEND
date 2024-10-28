@@ -6,7 +6,11 @@ dotenv.config();
 // Middleware xác thực và phân quyền
 const authMiddleware = (allowedRoles = []) => {
   return async (req, res, next) => {
-    const accessToken = req.cookies?.accessToken;
+    let accessToken = req.cookies.accessToken || req.headers['authorization'];
+
+    if (accessToken && accessToken.startsWith("Bearer ")) {
+      accessToken = accessToken.slice(7); // Loại bỏ "Bearer " khỏi token
+    }
 
     if (!accessToken) {
       return res.status(401).json({ error: "Please Login First" });

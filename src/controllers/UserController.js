@@ -57,26 +57,28 @@ const loginUser = async (req, res) => {
     const response = await UserService.loginUser(req.body);
 
     if (response.status === "success") {
-      // res.cookie('accessToken', response.access_token, {
-      //     httpOnly: true,
-      //     //secure: process.env.NODE_ENV === 'production', // Chỉ sử dụng cookie secure trong môi trường production
-      //     maxAge: 3600000 // 1 giờ
+      // const accessToken = jwt.sign(
+      //   { id: response.userId, role: response.role },
+      //   process.env.ACCESS_TOKEN, // Lấy từ biến môi trường
+      //   { expiresIn: "1h" }
+      // );
+
+      // // Lưu accessToken vào cookie
+      // res.cookie("accessToken", accessToken, {
+      //   httpOnly: true,
+      //   secure: false,
+      //   sameSite: 'None',
+      //   maxAge: 3600000, // 1 hour
       // });
 
-      // Tạo accessToken chứa userId và role
-      const accessToken = jwt.sign(
-        { id: response.userId, role: response.role },
-        process.env.ACCESS_TOKEN, // Lấy từ biến môi trường
-        { expiresIn: "1h" }
-      );
-
-      // Lưu accessToken vào cookie
-      res.cookie("accessToken", accessToken, {
+      res.cookie("accessToken", response.access_token, {
         httpOnly: true,
         secure: false,
         sameSite: 'None',
-        maxAge: 3600000, // 1 hour
+        maxAge: 86400000, // 24 hour
       });
+
+      //console.log('controller', accessToken)
 
       // Chuẩn bị thông tin phản hồi cho người dùng
       const userData = {
@@ -101,14 +103,8 @@ const loginUser = async (req, res) => {
       return res.status(200).json({
         status: "success",
         message: "Login successful",
-        //role: response.role,
-        token: accessToken,
-        user: userData,
-        // user: {
-        //   id: response.userId,
-        //   email: email,
-        //   role: response.role,
-        // },
+        token: response.access_token,
+        user: userData
       });
     } else {
       return res.status(401).json({
