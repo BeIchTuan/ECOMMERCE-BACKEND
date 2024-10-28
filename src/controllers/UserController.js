@@ -75,7 +75,7 @@ const loginUser = async (req, res) => {
         httpOnly: true,
         secure: false,
         sameSite: 'None',
-        maxAge: 8640000000000000, // 24 hour
+        maxAge: 86400000, // 24 hour
       });
 
       //console.log('controller', accessToken)
