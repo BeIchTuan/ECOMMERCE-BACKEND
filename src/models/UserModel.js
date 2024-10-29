@@ -27,7 +27,7 @@ const userSchema = new Schema(
     rating: { type: Number },
     access_token: { type: String, require: true },
     refresh_token: { type: String, require: true },
-    //cart: { type: Schema.Types.ObjectId, ref: 'Cart' },
+    cart: { type: Schema.Types.ObjectId, ref: 'Cart' },
     favoriteProducts: [{ type: Schema.Types.ObjectId, ref: 'Product' }],
 
     // Fields specific to sellers
