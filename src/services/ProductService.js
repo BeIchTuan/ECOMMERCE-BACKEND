@@ -82,32 +82,61 @@ class ProductService {
   }
 
   //Lấy danh sách sản phẩm khuyến nghị cho khách hàng
-  async getRecommendedProducts(page = 1, limit = 15, userId) {
+  async getRecommendedProducts(page = 1, itemsPerPage = 15, userId) {
+    // try {
+    //   const skip = (page - 1) * itemsPerPage;
+
+    //   // Tìm người dùng và lấy danh sách danh mục yêu thích
+    //   const user = await User.findById(userId);
+    //   const favoriteProducts = user.favoriteProducts || []; // Giả sử `favoriteProducts` chứa danh sách các ObjectId của danh mục
+    //   console.log(user.favoriteProducts)
+
+    //   // Lọc sản phẩm dựa trên danh mục yêu thích của người dùng
+    //   const products = await Product.find({ product: { $in: favoriteProducts } })
+    //     .skip(skip)
+    //     .limit(itemsPerPage)
+    //     .populate('product', 'name'); // Lấy tên của product
+
+    //   // Đếm tổng số sản phẩm để tính tổng số trang
+    //   const totalItems = await Product.countDocuments({ product: { $in: favoriteProducts } });
+    //   const totalPages = Math.ceil(totalItems / itemsPerPage);
+
+    //   return {
+    //     products,
+    //     pagination: {
+    //       currentPage: page,
+    //       totalPages,
+    //       itemsPerPage,
+    //       totalItems
+    //     }  
+    //   };
+    // } catch (error) {
+    //   throw new Error(error.message);
+    // }
     try {
-      const skip = (page - 1) * limit;
+        const skip = (page - 1) * itemsPerPage;
 
-      // Tìm người dùng và lấy danh sách danh mục yêu thích
-      const user = await User.findById(userId);
-      const favoriteCategories = user.favoriteCategories || []; // Giả sử `favoriteCategories` chứa danh sách các ObjectId của danh mục
+        // Fetch products from the database without any filtering
+        const products = await Product.find()
+            .skip(skip)
+            .limit(itemsPerPage)
+            // .populate('product', 'name'); // Populate with product name
 
-      // Lọc sản phẩm dựa trên danh mục yêu thích của người dùng
-      const products = await Product.find({ category: { $in: favoriteCategories } })
-        .skip(skip)
-        .limit(limit)
-        .populate('category', 'name'); // Lấy tên của category
+        // Count total products to calculate total pages
+        const totalItems = await Product.countDocuments();
+        const totalPages = Math.ceil(totalItems / itemsPerPage);
 
-      // Đếm tổng số sản phẩm để tính tổng số trang
-      const totalProducts = await Product.countDocuments({ category: { $in: favoriteCategories } });
-      const totalPages = Math.ceil(totalProducts / limit);
-
-      return {
-        products,
-        currentPage: page,
-        totalPages,
-        totalProducts
-      };
+        return {
+            products,
+            pagination: {
+                currentPage: page,
+                totalPages,
+                itemsPerPage,
+                totalItems
+            }
+        };
     } catch (error) {
-      throw new Error(error.message);
+        throw new Error(error.message);
     }
   }
   
