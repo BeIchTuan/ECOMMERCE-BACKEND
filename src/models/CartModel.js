@@ -4,7 +4,7 @@ const Schema = mongoose.Schema;
 // Định nghĩa schema CartItem
 const cartItemSchema = new Schema({
     product: { type: Schema.Types.ObjectId, ref: 'Product' },
-    quantity: { type: Number, required: true }
+    quantity: { type: Number, required: true },
 });
 
 // Định nghĩa model CartItem
@@ -12,6 +12,7 @@ const CartItem = mongoose.model('CartItem', cartItemSchema);
 
 // Định nghĩa schema Cart
 const cartSchema = new Schema({
+    user: { type: Schema.Types.ObjectId, ref: 'User', required: true }, // Reference to User
     cartItem: [{ type: Schema.Types.ObjectId, ref: 'CartItem' }]
 });
 

@@ -1,4 +1,6 @@
-const {Cart, CartItem} = require("../models/CartModel");
+const { Cart, CartItem } = require("../models/CartModel");
+const Product = require("../models/ProductModel");
+const User = require("../models/UserModel");
 
 class CartService {
   async getCart(userId) {
@@ -71,6 +73,59 @@ class CartService {
     } catch (error) {
       throw new Error(error.message);
     }
+  }
+
+  async replaceCart(userId, cartBody) {
+    // Check if cartBody.products is an array
+    if (!Array.isArray(cartBody.products)) {
+        throw new Error("Invalid cart body format: 'products' should be an array.");
+    }
+
+    // Find or create a cart for the user
+    let cart = await Cart.findOne({ user: userId }).populate("cartItem");
+
+    if (!cart) {
+        cart = new Cart({ user: userId, cartItem: [] });
+    }
+
+    // Process each product in the products array
+    for (const product of cartBody.products) {
+        let cartItem;
+
+        // Check if cartItemId is valid before finding
+        if (product.cartItemId) {
+            cartItem = await CartItem.findById(product.cartItemId);
+        }
+
+        // If the item exists, update it; otherwise, create a new one
+        if (cartItem) {
+            cartItem.quantity = product.quantity;
+        } else {
+            // Create a new cart item if it doesn't exist or cartItemId was invalid
+            cartItem = new CartItem({
+                product: product.id,
+                quantity: product.quantity,
+            });
+            cart.cartItem.push(cartItem._id);
+        }
+
+        await cartItem.save();
+    }
+
+    await cart.save();
+    return cart;
+}
+
+  // Update quantity of a product in the cart
+
+  // Remove a product from the cart
+  async removeFromCart(cartItemId) {
+    const cartItem = await CartItem.findById(cartItemId);
+    if (!cartItem) throw new Error("Cart item not found");
+
+    await CartItem.findByIdAndRemove(cartItemId);
+    await Cart.updateOne({}, { $pull: { cartItem: cartItemId } });
+    return cartItemId;
   }
 }
 
