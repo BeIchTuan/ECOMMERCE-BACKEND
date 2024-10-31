@@ -2,7 +2,7 @@ const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 
 const rateSchema = new Schema({
-    star: { type: Number, required: true },
+    star: { type: Number, default: 0},
     comment: { type: String },
     reply: { type: String }
 });
