@@ -74,7 +74,8 @@ class ProductService {
       if (products.length === 0) {
         throw new Error('No products found for this shop');
       }
-  
+      
+
       return products;
     } catch (error) {
       throw new Error('Error retrieving products: ' + error.message);
