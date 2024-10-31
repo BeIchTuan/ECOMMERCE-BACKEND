@@ -20,8 +20,8 @@ const productSchema = new Schema({
     inStock: { type: Number, required: true },
     image: [{ type: String,  required: true }],
     discount: { type: Schema.Types.ObjectId, ref: 'Discount' },
-    //rates: [{ type: Schema.Types.ObjectId, ref: 'Rate' }],
-    rate: { type: Number, default: 0 },
+    rates: [{ type: Schema.Types.ObjectId, ref: 'Rate' }],
+    //rate: { type: Number, default: 0 },
     seller: { type: Schema.Types.ObjectId, ref: 'User'},
 });
 
