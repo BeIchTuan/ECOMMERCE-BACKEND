@@ -57,28 +57,12 @@ const loginUser = async (req, res) => {
     const response = await UserService.loginUser(req.body);
 
     if (response.status === "success") {
-      // const accessToken = jwt.sign(
-      //   { id: response.userId, role: response.role },
-      //   process.env.ACCESS_TOKEN, // Lấy từ biến môi trường
-      //   { expiresIn: "1h" }
-      // );
-
-      // // Lưu accessToken vào cookie
-      // res.cookie("accessToken", accessToken, {
-      //   httpOnly: true,
-      //   secure: false,
-      //   sameSite: 'None',
-      //   maxAge: 3600000, // 1 hour
-      // });
-
       res.cookie("accessToken", response.access_token, {
         httpOnly: true,
         secure: false,
-        sameSite: 'None',
+        sameSite: "None",
         maxAge: 86400000, // 24 hour
       });
-
-      //console.log('controller', accessToken)
 
       // Chuẩn bị thông tin phản hồi cho người dùng
       const userData = {
@@ -104,7 +88,7 @@ const loginUser = async (req, res) => {
         status: "success",
         message: "Login successful",
         token: response.access_token,
-        user: userData
+        user: userData,
       });
     } else {
       return res.status(401).json({
@@ -162,7 +146,7 @@ const updateUser = async (req, res) => {
     return res.status(200).json({
       status: "success",
       message: "User updated successfully",
-      data: response.data
+      data: response.data,
     });
   } catch (e) {
     return res.status(500).json({
@@ -214,10 +198,75 @@ const getUser = async (req, res) => {
   }
 };
 
+const addFavouriteProduct = async (req, res) => {
+  try {
+    const userId = req.id;
+    const productId = req.params.productId;
+
+    const favoriteProducts = await UserService.addFavoriteProduct(
+      userId,
+      productId
+    );
+
+    res.json({
+      status: "success",
+      message: "Product added to favorites",
+      favoriteProducts,
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: "error",
+      message: "Failed to add product to favorites",
+    });
+  }
+};
+
+const deleteFavoriteProduct = (req, res) => {
+  const userId = req.id;
+  const productId = req.params.productId;
+
+  UserService.deleteFavoriteProduct(userId, productId)
+    .then((favoriteProducts) => {
+      res.json({
+        status: "success",
+        message: "Product removed from favorites",
+      });
+    })
+    .catch((error) => {
+      res.status(500).json({
+        status: "error",
+        message: "Failed to remove product from favorites",
+        error,
+      });
+    });
+};
+
+const getFavoriteProducts = (req, res) => {
+  const userId = req.id;
+
+  UserService.getFavoriteProducts(userId)
+    .then((favoriteProducts) => {
+      res.json({
+        status: "success",
+        favoriteProducts,
+      });
+    })
+    .catch((error) => {
+      res.status(500).json({
+        status: "error",
+        message: "Failed to retrieve favorite products",
+        error,
+      });
+    });
+};
+
 module.exports = {
   createUser,
   loginUser,
   updateUser,
   deleteUser,
   getUser,
+  addFavouriteProduct,
+  deleteFavoriteProduct,
+  getFavoriteProducts,
 };

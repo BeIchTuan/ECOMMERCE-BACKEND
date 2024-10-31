@@ -1,6 +1,7 @@
 const User = require("../models/UserModel");
 const bcrypt = require("bcrypt"); // For password hashing
 const { generalAccessToken, generalRefreshToken } = require("./Jwtservice");
+const mongoose = require("mongoose");
 
 const createUser = (newUser) => {
   return new Promise(async (resolve, reject) => {
@@ -131,7 +132,6 @@ const loginUser = (userLogin) => {
         access_token: access_token,
         ...shopInfo, // Thêm thông tin cửa hàng nếu có
       });
-
     } catch (e) {
       reject(e);
     }
@@ -141,32 +141,32 @@ const loginUser = (userLogin) => {
 const updateUser = (id, data) => {
   return new Promise(async (resolve, reject) => {
     try {
-    //   const checkUser = await User.findOne({
-    //     _id: id,
-    //   });
+      //   const checkUser = await User.findOne({
+      //     _id: id,
+      //   });
 
-    //   if (checkUser === null) {
-    //     resolve({
-    //       status: "error",
-    //       message: "The user is not defined",
-    //     });
-    //   }
+      //   if (checkUser === null) {
+      //     resolve({
+      //       status: "error",
+      //       message: "The user is not defined",
+      //     });
+      //   }
 
-    //   const updatedUser = await User.findByIdAndUpdate(id, data, { new: true });
+      //   const updatedUser = await User.findByIdAndUpdate(id, data, { new: true });
 
-    //   console.log('update user: ', updatedUser)
+      //   console.log('update user: ', updatedUser)
 
-    //   resolve({
-    //     status: "success",
-    //     message: "Updated",
-    //     data: updatedUser,
-    //   });
-    // } catch (e) {
-    //   reject(e);
-    // }
-    const user = await User.findById(id);
+      //   resolve({
+      //     status: "success",
+      //     message: "Updated",
+      //     data: updatedUser,
+      //   });
+      // } catch (e) {
+      //   reject(e);
+      // }
+      const user = await User.findById(id);
       if (!user) {
-        throw new Error('User not found');
+        throw new Error("User not found");
       }
 
       // Cập nhật các trường hợp lệ đã được lọc trong controller
@@ -179,7 +179,7 @@ const updateUser = (id, data) => {
         data: updatedUser,
       });
     } catch (error) {
-      reject(new Error('Failed to update user: ' + error.message));
+      reject(new Error("Failed to update user: " + error.message));
     }
   });
 };
@@ -229,7 +229,7 @@ const getUser = (id) => {
         birthday: user.birthday,
         gender: user.gender,
         phone: user.phone,
-        address: user.address
+        address: user.address,
       };
 
       // Nếu role là "seller", thêm các trường liên quan đến cửa hàng
@@ -242,13 +242,88 @@ const getUser = (id) => {
       // Trả về dữ liệu người dùng với thông tin bổ sung nếu là seller
       resolve({
         status: "success",
-        user: userData
+        user: userData,
       });
-
     } catch (e) {
       reject(e);
     }
   });
+};
+
+const addFavoriteProduct = (userId, productId) => {
+  if (!mongoose.Types.ObjectId.isValid(productId)) {
+    return Promise.reject("Invalid product ID");
+  }
+
+  return User.findById(userId)
+    .then((user) => {
+      if (!user) return Promise.reject("User not found");
+
+      if (user.favoriteProducts.includes(productId)) {
+        return Promise.reject("Product already in favorites");
+      }
+
+      user.favoriteProducts.push(productId);
+      return user.save().then(() => Promise.resolve(user.favoriteProducts));
+    })
+    .catch((error) => Promise.reject(error.message));
+};
+
+const deleteFavoriteProduct = (userId, productId) => {
+  if (!mongoose.Types.ObjectId.isValid(productId)) {
+    return Promise.reject("Invalid product ID");
+  }
+
+  return User.findById(userId)
+    .then((user) => {
+      if (!user) return Promise.reject("User not found");
+
+      user.favoriteProducts = user.favoriteProducts.filter(
+        (favProductId) => favProductId.toString() !== productId
+      );
+
+      return user.save().then(() => Promise.resolve(user.favoriteProducts));
+    })
+    .catch((error) => Promise.reject(error.message));
+};
+
+const getFavoriteProducts = (userId) => {
+  return User.findById(userId)
+    .populate({
+      path: "favoriteProducts",
+      populate: [
+        { path: "category", select: "id name" },
+        { path: "seller", select: "id shopName" },
+      ],
+    })
+    .then((user) => {
+      if (!user) return Promise.reject("User not found");
+
+      const formattedFavorites = user.favoriteProducts.map((product) => ({
+        id: product._id.toString(),
+        name: product.name,
+        description: product.description,
+        price: product.price,
+        shop: product.seller
+          ? {
+              id: product.seller._id.toString(),
+              name: product.seller.shopName,
+            }
+          : null,
+        category: product.category.map((cat) => ({
+          id: cat._id.toString(),
+          name: cat.name,
+        })),
+        discount: product.discount ? product.discount._id.toString() : null,
+        rates: {
+          star: product.rate || 0,
+        },
+        image: product.thumbnail || "",
+      }));
+
+      return Promise.resolve(formattedFavorites);
+    })
+    .catch((error) => Promise.reject(error.message));
 };
 
 module.exports = {
@@ -257,4 +332,7 @@ module.exports = {
   updateUser,
   deleteUser,
   getUser,
+  addFavoriteProduct,
+  deleteFavoriteProduct,
+  getFavoriteProducts,
 };
