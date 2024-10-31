@@ -10,7 +10,7 @@ router.put('/seller/products/:id', authMiddleware(['seller']),productController.
 //Delete products
 router.delete('/seller/products/:id', authMiddleware(['seller']),productController.deleteProduct);
 //Get all shop's product with seller ID
-router.get('/seller/products/:sellerId', productController.getAllShopProduct); 
+router.get('/seller/products/:id', productController.getAllShopProduct); 
 //Get product details
 router.get('/products/:id', productController.getProductDetails);
 //Get recommended products for user
