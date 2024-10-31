@@ -1,6 +1,6 @@
 const { Cart, CartItem } = require("../models/CartModel");
-const Product = require("../models/ProductModel");
-const User = require("../models/UserModel");
+// const Product = require("../models/ProductModel");
+// const User = require("../models/UserModel");
 
 class CartService {
   async getCart(userId) {
@@ -18,8 +18,6 @@ class CartService {
         },
       });
 
-      console.log("Cart after populate:", cart);
-
       if (!cart) {
         return {
           totalAmount: 0,
@@ -35,11 +33,9 @@ class CartService {
 
           // Kiểm tra nếu `product` hoặc `seller` là null
           if (!product) {
-            console.warn(`Product not found for cartItemId: ${item._id}`);
             return null;
           }
           if (!product.seller) {
-            console.warn(`Seller not found for productId: ${product._id}`);
             return null;
           }
 
@@ -72,8 +68,6 @@ class CartService {
         })
         .filter((item) => item !== null); // Lọc bỏ các mục null
 
-      console.log("Processed products:", products);
-
       return {
         totalAmount,
         totalSelectedAmount: null,
@@ -86,58 +80,48 @@ class CartService {
   }
 
   async replaceCart(userId, cartBody) {
-    // Check if cartBody.products is an array
-    if (!Array.isArray(cartBody.products)) {
-      throw new Error(
-        "Invalid cart body format: 'products' should be an array."
-      );
-    }
-
-    // Find or create a cart for the user
-    let cart = await Cart.findOne({ user: userId }).populate("cartItem");
-
-    if (!cart) {
-      cart = new Cart({ user: userId, cartItem: [] });
-    }
-
-    // Process each product in the products array
-    for (const product of cartBody.products) {
-      let cartItem;
-
-      // Check if cartItemId is valid before finding
-      if (product.cartItemId) {
-        cartItem = await CartItem.findById(product.cartItemId);
+    try {
+      // Kiểm tra nếu `products` không phải là một mảng, báo lỗi ngay lập tức
+      if (!Array.isArray(cartBody.products)) {
+        throw new Error(
+          "Invalid cart body format: 'products' should be an array."
+        );
       }
 
-      // If the item exists, update it; otherwise, create a new one
-      if (cartItem) {
-        cartItem.quantity = product.quantity;
+      // Tìm giỏ hàng của người dùng dựa trên userId
+      let cart = await Cart.findOne({ user: userId });
+
+      // Nếu giỏ hàng chưa tồn tại, tạo mới một giỏ hàng cho user
+      if (!cart) {
+        cart = new Cart({ user: userId, cartItem: [] });
       } else {
-        // Create a new cart item if it doesn't exist or cartItemId was invalid
-        cartItem = new CartItem({
+        // Nếu giỏ hàng đã tồn tại, xóa các mục hiện có trong giỏ hàng
+        await CartItem.deleteMany({ _id: { $in: cart.cartItem } });
+        cart.cartItem = [];
+      }
+
+      // Duyệt qua từng sản phẩm trong `products` từ FE gửi đến
+      for (const product of cartBody.products) {
+        // Tạo một CartItem mới cho từng sản phẩm
+        const cartItem = new CartItem({
           product: product.id,
           quantity: product.quantity,
         });
+
+        // Lưu CartItem vào database
+        await cartItem.save();
+
+        // Thêm CartItem mới vào giỏ hàng
         cart.cartItem.push(cartItem._id);
       }
 
-      await cartItem.save();
+      // Lưu giỏ hàng cập nhật
+      await cart.save();
+
+      return cart;
+    } catch (error) {
+      throw Error(error.message);
     }
-
-    await cart.save();
-    return cart;
-  }
-
-  // Update quantity of a product in the cart
-
-  // Remove a product from the cart
-  async removeFromCart(cartItemId) {
-    const cartItem = await CartItem.findById(cartItemId);
-    if (!cartItem) throw new Error("Cart item not found");
-
-    await CartItem.findByIdAndRemove(cartItemId);
-    await Cart.updateOne({}, { $pull: { cartItem: cartItemId } });
-    return cartItemId;
   }
 }
 
