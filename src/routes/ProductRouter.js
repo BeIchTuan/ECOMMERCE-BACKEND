@@ -14,7 +14,7 @@ router.get('/seller/products/:id', productController.getAllShopProduct);
 //Get product details
 router.get('/products/:id', productController.getProductDetails);
 //Get recommended products for user
-router.get('/user/products/:userId', authMiddleware(['user']), productController.getRecommendedProducts);
+router.get('/user/products/:id', authMiddleware(['user']), productController.getRecommendedProducts);
 
 
 
