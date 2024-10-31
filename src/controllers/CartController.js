@@ -4,7 +4,6 @@ class CartController {
   async getCart(req, res) {
     try {
       const userId = req.id; // Lấy userId từ middleware đã xác thực
-      console.log(userId)
       const cartData = await CartService.getCart(userId);
   
       res.json({
