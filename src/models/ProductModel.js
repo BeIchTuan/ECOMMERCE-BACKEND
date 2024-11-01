@@ -27,7 +27,7 @@ const productSchema = new Schema({
 
 // Add a virtual for `thumbnail` that returns the first image in the `image` array
 productSchema.virtual('thumbnail').get(function() {
-  return this.image.length > 0 ? this.image[0] : null;
+  return Array.isArray(this.image) && this.image.length > 0 ? this.image[0] : null;
 });
 
 // Ensure virtuals are included in JSON responses
