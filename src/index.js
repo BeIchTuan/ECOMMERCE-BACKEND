@@ -51,34 +51,3 @@ mongoose.connect(process.env.MONGO_URI)
     console.error('Mongoose connection error:', err);
   });
 
-// async function main() {
-//   const uri = process.env.MONGO_URI;
-
-//   // Add useNewUrlParser and useUnifiedTopology options for MongoDB driver
-//   const client = new MongoClient(uri);
-
-//   try {
-//     console.log('Attempting to connect to MongoDB...');
-//     await client.connect();
-//     console.log('Successfully connected to MongoDB!');
-
-//     // Make the appropriate DB calls
-//     await listDatabases(client);
-//   } catch (e) {
-//     console.error('Failed to connect to MongoDB:', e.message);
-//   } finally {
-//     await client.close();
-//   }
-// }
-
-// main().catch(console.error);
-
-// async function listDatabases(client) {
-//   const databasesList = await client.db().admin().listDatabases();
-//   console.log('Databases:');
-//   databasesList.databases.forEach(db => console.log(` - ${db.name}`));
-// }
-
-// app.listen(port, () => {
-//   console.log(`App listening on port ${port}`);
-// });
