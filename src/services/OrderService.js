@@ -31,15 +31,18 @@ class OrderService {
           phone: order.address.phone,
         },
         items: order.items.map((item) => ({
-          product: item.product ? {  // Check if `product` is defined
-            id: item.product._id,
-            name: item.product.name,
-            price: item.product.price,
-            image: item.product.thumbnail,
-          } : null,  // Set to null or an empty object if undefined
+          product: item.product
+            ? {
+                // Check if `product` is defined
+                id: item.product._id,
+                name: item.product.name,
+                price: item.product.price,
+                image: item.product.thumbnail,
+              }
+            : null, // Set to null or an empty object if undefined
           quantity: item.quantity,
         })),
-      }));      
+      }));
 
       return Promise.resolve({
         status: "success",
@@ -135,6 +138,76 @@ class OrderService {
       };
     } catch (error) {
       throw new Error("Failed to create order");
+    }
+  }
+
+  async getOrderDetails(orderId) {
+    try {
+      const order = await Order.findById(orderId).populate("items.productId"); // Populate product details
+
+      if (!order) {
+        throw new Error("Order not found");
+      }
+
+      return {
+        orderId: order._id,
+        orderDate: order.createdAt,
+        totalPrice: order.totalPrice,
+        paymentMethod: order.paymentMethod,
+        shippingCost: order.shippingCost,
+        deliveryStatus: order.deliveryStatus,
+        address: {
+          nameOfLocation: order.address.nameOfLocation,
+          location: order.address.location,
+          phone: order.address.phone,
+        },
+        items: order.items.map((item) => ({
+          productId: {
+            id: item.productId._id,
+            name: item.productId.name,
+            price: item.productId.price,
+            image: item.productId.thumbnail, // Assuming product has an image field
+          },
+          quantity: item.quantity,
+        })),
+      };
+    } catch (error) {
+      return {
+        status: "error",
+        message: "Failed to retrieve orders",
+      };
+    }
+  }
+
+  async cancelOrder(orderId) {
+    try {
+      const order = await Order.findById(orderId);
+
+      if (!order) {
+        return { success: false, message: "Order not found" };
+      }
+
+      // Check if the order is within the 6-hour cancellation window
+      const sixHoursInMilliseconds = 6 * 60 * 60 * 1000;
+      const timeSinceOrder = Date.now() - new Date(order.createdAt).getTime();
+
+      if (timeSinceOrder > sixHoursInMilliseconds) {
+        return {
+          success: false,
+          message: "Order can only be canceled within 6 hours",
+        };
+      }
+
+      // Assuming there's a 'canceled' status in your deliveryStatus options
+      order.deliveryStatus = "canceled";
+      await order.save();
+
+      return { success: true };
+    } catch (error) {
+      return {
+        status: "error",
+        message: "Failed to retrieve orders",
+      };
     }
   }
 }

@@ -39,6 +39,44 @@ class OrderController {
       res.status(500).json({ status: "error", message: error.message });
     }
   }
+
+  async getOrderDetails(req, res) {
+    try {
+      const orderId = req.params.id; // assuming orderId is passed as a URL parameter
+      const orderDetails = await OrderService.getOrderDetails(orderId);
+
+      res.status(200).json({
+        status: "success",
+        ...orderDetails,
+      });
+    } catch (error) {
+      res
+        .status(500)
+        .json({ status: "error", message: "Failed to retrieve order" });
+    }
+  }
+
+  async cancelOrder(req, res) {
+    try {
+      const orderId = req.params.id; // assuming orderId is passed as a URL parameter
+      const result = await OrderService.cancelOrder(orderId);
+  
+      if (result.success) {
+        res.status(200).json({
+          status: "success",
+          message: "Order has been canceled successfully",
+        });
+      } else {
+        res.status(400).json({
+          status: "error",
+          message: result.message,
+        });
+      }
+    } catch (error) {
+      console.error("Error canceling order:", error);
+      res.status(500).json({ status: "error", message: "Unable to cancel order" });
+    }
+  }
 }
 
 module.exports = new OrderController();
