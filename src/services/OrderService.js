@@ -1,0 +1,142 @@
+const Order = require("../models/OrderModel");
+const Product = require("../models/ProductModel");
+
+class OrderService {
+  async getOrders(userId, page = 1, itemsPerPage = 15) {
+    try {
+      const skip = (page - 1) * itemsPerPage;
+      // Lấy tổng số lượng đơn hàng để tính tổng trang
+      const totalOrders = await Order.countDocuments({ userId: userId });
+      const totalPages = Math.ceil(totalOrders / itemsPerPage);
+
+      const orders = await Order.find({ userId: userId })
+        .populate({
+          path: "items.productId",
+          select: "id name price thumbnail",
+        })
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(itemsPerPage);
+
+      const formattedOrders = orders.map((order) => ({
+        orderId: order._id,
+        orderDate: order.createdAt,
+        totalPrice: order.totalPrice,
+        paymentMethod: order.paymentMethod,
+        shippingCost: order.shippingCost,
+        deliveryStatus: order.deliveryStatus,
+        address: {
+          nameOfLocation: order.address.nameOfLocation,
+          location: order.address.location,
+          phone: order.address.phone,
+        },
+        items: order.items.map((item) => ({
+          product: item.product ? {  // Check if `product` is defined
+            id: item.product._id,
+            name: item.product.name,
+            price: item.product.price,
+            image: item.product.thumbnail,
+          } : null,  // Set to null or an empty object if undefined
+          quantity: item.quantity,
+        })),
+      }));      
+
+      return Promise.resolve({
+        status: "success",
+        orders: formattedOrders,
+        pagination: {
+          currentPage: page,
+          totalPages,
+          itemsPerPage,
+          totalOrders,
+        },
+      });
+    } catch (error) {
+      console.error("Error retrieving orders:", error.message); // Log error details
+      return {
+        status: "error",
+        message: "Failed to retrieve orders",
+        error: error.message,
+      };
+    }
+  }
+
+  async createOrder(userId, items, address, paymentMethod, shippingCost) {
+    try {
+      const orderItems = [];
+      let totalPrice = 0;
+
+      for (const item of items) {
+        const product = await Product.findById(item.productId)
+          .populate("discount")
+          .exec();
+        if (!product) throw new Error("Product not found");
+
+        const price = product.price;
+        let finalPrice = price;
+
+        if (
+          item.voucherId &&
+          product.discount &&
+          product.discount._id.toString() === item.voucherId
+        ) {
+          finalPrice = price - product.discount.value;
+        }
+
+        const itemTotal = finalPrice * item.quantity;
+        totalPrice += itemTotal;
+
+        orderItems.push({
+          productId: item.productId,
+          quantity: item.quantity,
+          price: finalPrice,
+          sellerId: product.seller,
+        });
+      }
+
+      totalPrice += shippingCost;
+
+      const newOrder = new Order({
+        userId,
+        items: orderItems,
+        address,
+        totalPrice,
+        paymentMethod,
+        shippingCost,
+        deliveryStatus: "Pending",
+      });
+
+      const savedOrder = await newOrder.save();
+
+      const responseItems = await Promise.all(
+        orderItems.map(async (item) => {
+          const product = await Product.findById(item.productId);
+          return {
+            product: {
+              id: product._id,
+              name: product.name,
+              price: item.price,
+              image: product.thumbnail,
+            },
+            quantity: item.quantity,
+          };
+        })
+      );
+
+      return {
+        orderId: savedOrder._id,
+        orderDate: savedOrder.createdAt,
+        totalPrice: savedOrder.totalPrice,
+        paymentMethod: savedOrder.paymentMethod,
+        shippingCost: savedOrder.shippingCost,
+        deliveryStatus: savedOrder.deliveryStatus,
+        address: savedOrder.address,
+        items: responseItems,
+      };
+    } catch (error) {
+      throw new Error("Failed to create order");
+    }
+  }
+}
+
+module.exports = new OrderService();
