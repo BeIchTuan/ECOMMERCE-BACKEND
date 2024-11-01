@@ -3,6 +3,8 @@ const router = express.Router()
 const productController = require('../controllers/ProductController')
 const { authMiddleware } = require('../middlewares/authMiddleware');
 
+//Search products
+router.get('/products/search', productController.searchProducts);
 //Create new product
 router.post('/seller/products', authMiddleware(['seller']),productController.createProduct);
 //Update product
@@ -15,9 +17,6 @@ router.get('/seller/products/:id', productController.getAllShopProduct);
 router.get('/products/:id', productController.getProductDetails);
 //Get recommended products for user
 router.get('/user/products/:id', authMiddleware(['user']), productController.getRecommendedProducts);
-
-
-
 
 
 module.exports = router

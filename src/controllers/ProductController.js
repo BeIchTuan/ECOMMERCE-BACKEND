@@ -118,6 +118,22 @@ class ProductController {
       });
     }
   };
+
+  async searchProducts(req, res) {
+    try {
+      const { name, categoryId, page = 1, itemsPerPage = 15 } = req.query;
+  
+      const products = await ProductService.searchProducts({ name, categoryId, page, itemsPerPage });
+  
+      res.json({
+        status: "success",
+        products,
+      });
+    } catch (error) {
+      res.status(500).json({ status: "error", message: error.message });
+    }
+  };
+  
 }
 
 module.exports = new ProductController();
