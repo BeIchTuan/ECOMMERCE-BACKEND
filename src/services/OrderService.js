@@ -32,13 +32,13 @@ class OrderService {
           phone: order.address.phone,
         },
         items: order.items.map((item) => ({
-          product: item.product
+          product: item.productId
             ? {
                 // Check if `product` is defined
-                id: item.product._id,
-                name: item.product.name,
-                price: item.product.price,
-                image: item.product.thumbnail,
+                id: item.productId,
+                name: item.productId.name,
+                price: item.productId.price,
+                image: item.productId.thumbnail,
               }
             : null, // Set to null or an empty object if undefined
           quantity: item.quantity,
@@ -74,6 +74,7 @@ class OrderService {
         const product = await Product.findById(item.productId)
           .populate("discount")
           .exec();
+
         if (!product) throw new Error("Product not found");
 
         const price = product.price;
@@ -108,7 +109,7 @@ class OrderService {
         paymentMethod,
         shippingCost,
         deliveryStatus: "pending",
-        paymentStatus: "pending"
+        paymentStatus: "pending",
       });
 
       const savedOrder = await newOrder.save();
@@ -212,6 +213,97 @@ class OrderService {
         status: "error",
         message: "Failed to retrieve orders",
       };
+    }
+  }
+
+  async getOrdersBySeller(sellerId, page = 1, itemsPerPage = 15) {
+    try {
+      const skip = (page - 1) * itemsPerPage;
+
+      // Get total count for pagination metadata
+      const totalOrders = await Order.countDocuments({
+        "items.sellerId": sellerId,
+      });
+      const totalPages = Math.ceil(totalOrders / itemsPerPage);
+
+      // Fetch paginated orders
+      const orders = await Order.find({ "items.sellerId": sellerId })
+        .skip(skip)
+        .limit(itemsPerPage)
+        .populate({
+          path: "userId",
+          select: "name avatar phone email",
+        })
+        .populate({
+          path: "items.productId",
+          select: "name description SKU price category image",
+          populate: [
+            { path: "category", select: "name" },
+            { path: "SKU.classifications", select: "_id name" },
+          ],
+        });
+
+      const formattedOrders = orders.map((order) => ({
+        id: order._id,
+        orderDate: order.createdAt,
+        customer: {
+          name: order.userId.name,
+          avatar: order.userId.avatar,
+          phone: order.userId.phone,
+          email: order.userId.email,
+        },
+        totalPrice: order.totalPrice,
+        status: order.deliveryStatus,
+        paymentStatus: order.paymentStatus,
+        products: order.items.map((item) => ({
+          product: item.productId
+            ? {
+                // Check if `product` is defined
+                id: item.productId,
+                name: item.productId.name,
+                price: item.productId.price,
+                image: item.productId.thumbnail,
+              }
+            : null, // Set to null or an empty object if undefined
+          quantity: item.quantity,
+        })),
+      }));
+
+      return {
+        orders: formattedOrders,
+        pagination: {
+          currentPage: page,
+          totalPages,
+          itemsPerPage,
+          totalOrders,
+        },
+      };
+    } catch (error) {
+      return {
+        status: "error",
+        message: "Failed to retrieve orders",
+        error: error.message,
+      };
+    }
+  }
+
+  async updateOrderStatus(orderId, status) {
+    try {
+      const order = await Order.findById(orderId);
+
+      console.log(order)
+      if (!order) {
+        return { success: false };
+      }
+
+      order.deliveryStatus = status;
+      await order.save();
+
+      return { success: true };
+    } catch (error) {
+      return{
+        success: false
+      }
     }
   }
 }
