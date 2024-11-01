@@ -14,16 +14,24 @@ const addressSchema = new Schema({
   phone: { type: String, required: true },
 });
 
-const orderSchema = new Schema({
-  userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
-  items: [orderItemSchema],
-  address: addressSchema,
-  totalPrice: { type: Number, required: true },
-  paymentMethod: { type: String, required: true },
-  shippingCost: { type: Number, required: true },
-  deliveryStatus: { type: String, default: "Pending" },
-  createdAt: { type: Date, default: Date.now },
-}, { timestamps: true });
+const orderSchema = new Schema(
+  {
+    userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    items: [orderItemSchema],
+    address: addressSchema,
+    totalPrice: { type: Number, required: true },
+    paymentMethod: { type: String, required: true },
+    paymentStatus: {type: String, enum: ["pending", "success"], default: "pending"},
+    shippingCost: { type: Number, required: true },
+    deliveryStatus: {
+      type: String,
+      enum: ["pending", "preparing", "delivering", "delivered"],
+      default: "pending",
+    },
+    createdAt: { type: Date, default: Date.now },
+  },
+  { timestamps: true }
+);
 
 const Order = mongoose.model("Order", orderSchema);
 

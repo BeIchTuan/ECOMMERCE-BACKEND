@@ -23,6 +23,7 @@ class OrderService {
         orderDate: order.createdAt,
         totalPrice: order.totalPrice,
         paymentMethod: order.paymentMethod,
+        paymentStatus: order.paymentStatus,
         shippingCost: order.shippingCost,
         deliveryStatus: order.deliveryStatus,
         address: {
@@ -106,7 +107,8 @@ class OrderService {
         totalPrice,
         paymentMethod,
         shippingCost,
-        deliveryStatus: "Pending",
+        deliveryStatus: "pending",
+        paymentStatus: "pending"
       });
 
       const savedOrder = await newOrder.save();
@@ -133,6 +135,7 @@ class OrderService {
         paymentMethod: savedOrder.paymentMethod,
         shippingCost: savedOrder.shippingCost,
         deliveryStatus: savedOrder.deliveryStatus,
+        paymentStatus: savedOrder.paymentStatus,
         address: savedOrder.address,
         items: responseItems,
       };
@@ -156,6 +159,7 @@ class OrderService {
         paymentMethod: order.paymentMethod,
         shippingCost: order.shippingCost,
         deliveryStatus: order.deliveryStatus,
+        paymentStatus: order.paymentStatus,
         address: {
           nameOfLocation: order.address.nameOfLocation,
           location: order.address.location,
