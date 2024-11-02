@@ -3,6 +3,7 @@ const ProductRouter = require('./ProductRouter')
 const CategoryRouter = require('./CategoryRouter')
 const CartRouter = require('./CartRouter')
 const OrderRouter = require('./OrderRouter')
+const ConversationRouter = require("./ConversationRouter")
 
 const routes = (app) => {
     app.use('/', UserRouter)
@@ -10,6 +11,7 @@ const routes = (app) => {
     app.use('/', CategoryRouter)
     app.use('/', CartRouter)
     app.use('/', OrderRouter)
+    app.use('/', ConversationRouter)
 }
 
 module.exports = routes
