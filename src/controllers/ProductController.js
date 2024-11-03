@@ -104,8 +104,8 @@ class ProductController {
   async getProductDetails(req, res) {
     try {
       const productId = req.params.id; // Lấy sellerId
-
-      const product = await ProductService.getProductDetails(productId);
+      const userId = req.id;
+      const product = await ProductService.getProductDetails(productId, userId);
       return res.status(200).json({
         status: 'success',
         message: "Get product details successfully",

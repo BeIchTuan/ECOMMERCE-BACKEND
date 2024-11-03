@@ -1,5 +1,7 @@
 const Product = require("../models/ProductModel");
 const User = require("../models/UserModel");
+const Discount = require("../models/DiscountModel");
+const Rate = require("../models/RateModel");
 
 class ProductService {
   // Tạo sản phẩm mới
@@ -17,13 +19,81 @@ class ProductService {
   }
 
   // Lấy sản phẩm theo ID
-  async getProductDetails(productId) {
+  async getProductDetails(productId, userId) {
     try {
-      return await Product.findById(productId).populate("category", "name");
+        const product = await Product.findById(productId)
+            .populate("category", "name") // Populating category to get its name
+            .populate({
+                path: "seller",
+                select: "shopName _id", // Getting shop name and ID
+            })
+            .lean();
+
+        // Check if discount and rates fields exist and are valid
+        if (product.discount) {
+            console.log("Discount ID:", product.discount);
+            await Product.populate(product, { path: "discount", select: "discountInPercent" });
+        } 
+
+        if (product.rates && product.rates.length > 0) {
+            console.log("Rates IDs:", product.rates);
+            await Product.populate(product, {
+                path: "rates",
+                select: "user star comment reply createdAt",
+                populate: { path: "user", select: "avatar name" },
+            });
+        } 
+
+        if (!product) throw new Error("Product not found");
+
+        const user = await User.findById(userId).select("favoriteProducts");
+
+      const favoriteProductIds = user
+        ? user.favoriteProducts.map((prod) => prod.toString())
+        : [];
+        const isFavorite = favoriteProductIds.includes(product._id.toString()); // Kiểm tra sản phẩm có trong danh sách yêu thích không
+
+        const reviews = (product.rates || []).map((rate) => ({
+            id: rate._id,
+            avatarSrc: rate.user?.avatar || "",
+            name: rate.user?.name || "Anonymous",
+            date: rate.createdAt.toISOString().split("T")[0],
+            stars: rate.star,
+            comment: rate.comment,
+            reply: rate.reply || "",
+        }));
+
+        const productDetails = {
+            id: product._id,
+            isFavorite,
+            name: product.name,
+            description: product.description,
+            price: product.price,
+            inStock: product.inStock,
+            sold: product.sold,
+            shopInfo: {
+                shopId: product.seller._id,
+                shopName: product.seller.shopName,
+            },
+            category: (product.category || []).map((cat) => ({
+                id: cat._id,
+                name: cat.name,
+            })),
+            sku: (product.SKU || []).map((skuItem) => ({
+                name: skuItem.name,
+                classification: skuItem.classifications,
+            })),
+            discount: product.discount ? product.discount.discountInPercent : 0,
+            reviews,
+            images: product.image,
+        };
+
+        return productDetails;
     } catch (error) {
-      throw new Error(error.message);
+        console.error("Error in getProductDetails:", error.message);
+        throw new Error(error.message);
     }
-  }
+}
 
   // Cập nhật sản phẩm
   async updateProduct(productId, sellerId, data) {
@@ -143,9 +213,7 @@ class ProductService {
             }
           : null;
 
-        const isFavorite = favoriteProductIds.includes(
-          product._id.toString()
-        ); // Kiểm tra sản phẩm có trong danh sách yêu thích không
+        const isFavorite = favoriteProductIds.includes(product._id.toString()); // Kiểm tra sản phẩm có trong danh sách yêu thích không
 
         delete productObj.seller; // Xóa trường seller khỏi product
 

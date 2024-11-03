@@ -14,7 +14,7 @@ router.delete('/seller/products/:id', authMiddleware(['seller']),productControll
 //Get all shop's product with seller ID
 router.get('/seller/products/:id', productController.getAllShopProduct); 
 //Get product details
-router.get('/products/:id', productController.getProductDetails);
+router.get('/products/:id',authMiddleware(['user','seller']), productController.getProductDetails);
 //Get recommended products for user
 router.get('/user/products/:id', authMiddleware(['user']), productController.getRecommendedProducts);
 
