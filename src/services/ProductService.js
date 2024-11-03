@@ -119,15 +119,41 @@ class ProductService {
       const skip = (page - 1) * itemsPerPage;
 
       // Fetch products from the database without any filtering
-      const products = await Product.find().skip(skip).limit(itemsPerPage);
-      // .populate('product', 'name'); // Populate with product name
+      const products = await Product.find()
+        .skip(skip)
+        .limit(itemsPerPage)
+        .populate("seller", "shopName"); // .populate('product', 'name'); // Populate with product name
+
+      const user = await User.findById(userId).select("favoriteProducts");
+
+      const favoriteProductIds = user
+        ? user.favoriteProducts.map((prod) => prod.toString())
+        : [];
 
       // Count total products to calculate total pages
       const totalItems = await Product.countDocuments();
       const totalPages = Math.ceil(totalItems / itemsPerPage);
 
+      const formattedProducts = products.map((product) => {
+        const productObj = product.toObject(); // Chuyển product thành đối tượng JavaScript thuần
+        const shopInfor = product.seller
+          ? {
+              shopId: product.seller._id,
+              shopName: product.seller.shopName,
+            }
+          : null;
+
+        const isFavorite = favoriteProductIds.includes(
+          product._id.toString()
+        ); // Kiểm tra sản phẩm có trong danh sách yêu thích không
+
+        delete productObj.seller; // Xóa trường seller khỏi product
+
+        return { ...productObj, shopInfor, isFavorite }; // Thêm shopInfo và isFavourite vào phản hồi
+      });
+
       return {
-        products,
+        products: formattedProducts,
         pagination: {
           currentPage: page,
           totalPages,
