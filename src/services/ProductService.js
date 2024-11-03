@@ -37,7 +37,7 @@ class ProductService {
           populate: { path: "user", select: "avatar name" },
         })
         .lean();
-        console.log("Product Rates after Populate:", product.rates);
+        
       if (!product) throw new Error("Product not found");
 
       const user = await User.findById(userId).select("favoriteProducts");
