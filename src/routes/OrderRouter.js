@@ -11,7 +11,7 @@ router.put("/orders/:id", authMiddleware(['user']), OrderController.cancelOrder)
 
 //Route for seller
 router.get("/seller/orders", authMiddleware(['seller']), OrderController.getOrdersBySeller);
-router.put("/seller/orders/:orderId/status", authMiddleware(['seller']), OrderController.updateOrderStatus);
+router.put("/orders/:orderId/status", authMiddleware(['user', 'seller']), OrderController.updateOrderStatus);
 
 
 module.exports = router;

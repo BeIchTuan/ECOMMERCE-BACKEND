@@ -80,6 +80,8 @@ class OrderService {
         const price = product.price;
         let finalPrice = price;
 
+        console.log(finalPrice)
+
         if (
           item.voucherId &&
           product.discount &&
@@ -289,23 +291,41 @@ class OrderService {
 
   async updateOrderStatus(orderId, status) {
     try {
-      const order = await Order.findById(orderId);
-
-      console.log(order)
+      const order = await Order.findById(orderId).populate("items.productId");
+  
       if (!order) {
         return { success: false };
       }
-
+  
+      // Update the delivery status
       order.deliveryStatus = status;
+  
+      // If the status is "success," increase the sold count for each product
+      if (status === "success") {
+        for (const item of order.items) {
+          const product = item.productId;
+          const quantity = item.quantity || 1; // Use the ordered quantity, default to 1 if not provided
+  
+          // Increment the sold count by the quantity ordered
+          await Product.findByIdAndUpdate(
+            product._id,
+            { $inc: { sold: quantity } },
+            { new: true }
+          );
+        }
+      }
+  
       await order.save();
-
+  
       return { success: true };
     } catch (error) {
-      return{
+      console.error(error);
+      return {
         success: false
-      }
+      };
     }
   }
+  
 }
 
 module.exports = new OrderService();
