@@ -110,7 +110,7 @@ class OrderController {
       const { status } = req.body;
 
       // Validate status
-      const validStatuses = ["pending", "preparing", "delivering", "delivered"];
+      const validStatuses = ["pending", "preparing", "delivering", "delivered", "success"];
       if (!validStatuses.includes(status)) {
         return res.status(400).json({
           status: "error",
