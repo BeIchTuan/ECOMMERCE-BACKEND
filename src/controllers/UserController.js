@@ -198,6 +198,53 @@ const getUser = async (req, res) => {
   }
 };
 
+const getCustomerInfor = async (req, res) => {
+  try {
+    const customerId = req.params.customerId; // Assuming the user ID is passed in the URL
+    console.log(customerId)
+    const result = await UserService.getCustomerInfor(customerId);
+
+    if (!result.success) {
+      return res.status(404).json({
+        status: "error",
+        message: "Failed to fetch customer contact",
+        message: result.message,
+      });
+    }
+
+    const user = result.user;
+    const response = {
+      status: "success",
+      contactInfo: {
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+      },
+    };
+
+    return res.status(200).json(response);
+  } catch (error) {
+    return res
+      .status(500)
+      .json({
+        status: "error",
+        message: "Failed to fetch customer contact",
+        message: error.message,
+      });
+  }
+};
+
+const getOrderCustomerHistory = async (req, res) => {
+  try {
+    const customerId = req.params.customerId; // Assuming the user ID is provided as a URL parameter
+    const result = await UserService.getCustomerOrderHistory(customerId);
+
+    res.status(200).json(result);
+  } catch (error) {
+    res.status(500).json({ status: "error", message: error.message });
+  }
+};
+
 const addFavouriteProduct = async (req, res) => {
   try {
     const userId = req.id;
@@ -269,4 +316,6 @@ module.exports = {
   addFavouriteProduct,
   deleteFavoriteProduct,
   getFavoriteProducts,
+  getCustomerInfor,
+  getOrderCustomerHistory
 };

@@ -10,9 +10,13 @@ router.put('/user/:id', authMiddleware(['user', 'seller']), userController.updat
 router.delete('/user/:id', userController.deleteUser)
 router.get('/user/:id', userController.getUser)
 
-//Favourite products
+//Favourite products for customer
 router.post('/favorites/:productId', authMiddleware(['user']), userController.addFavouriteProduct)
 router.delete('/favorites/:productId', authMiddleware(['user']), userController.deleteFavoriteProduct)
 router.get('/favorites', authMiddleware(['user']), userController.getFavoriteProducts)
+
+//Seller
+router.get('/seller/customers/:customerId/contact', authMiddleware(['seller']), userController.getCustomerInfor)
+router.get('/seller/customers/:customerId/orders', authMiddleware(['seller']), userController.getOrderCustomerHistory)
 
 module.exports = router

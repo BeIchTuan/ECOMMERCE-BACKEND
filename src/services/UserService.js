@@ -1,4 +1,6 @@
 const User = require("../models/UserModel");
+const Order = require("../models/OrderModel");
+
 const bcrypt = require("bcrypt"); // For password hashing
 const { generalAccessToken, generalRefreshToken } = require("./Jwtservice");
 const mongoose = require("mongoose");
@@ -250,6 +252,43 @@ const getUser = (id) => {
   });
 };
 
+const getCustomerInfor = (userId) => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      const user = await User.findById(userId).select("name email phone"); // Select only necessary fields
+      
+      if (!user) {
+        return resolve({ success: false, message: "User not found" });
+      }
+      
+      resolve({ success: true, user });
+    } catch (error) {
+      reject(error); // Reject with the error message
+    }
+  });
+};
+
+const getCustomerOrderHistory = (userId) => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      const orders = await Order.find({ userId })
+        .select("createdAt totalPrice")
+        .sort({ createdAt: -1 }); // Sort by date in descending order
+
+      // Format the orders for the response
+      const orderHistory = orders.map(order => ({
+        orderId: order._id,
+        orderDate: order.createdAt,
+        totalPrice: order.totalPrice,
+      }));
+
+      resolve({ status: "success", orderHistory });
+    } catch (error) {
+      reject(error);
+    }
+  });
+};
+
 const addFavoriteProduct = (userId, productId) => {
   if (!mongoose.Types.ObjectId.isValid(productId)) {
     return Promise.reject("Invalid product ID");
@@ -335,4 +374,6 @@ module.exports = {
   addFavoriteProduct,
   deleteFavoriteProduct,
   getFavoriteProducts,
+  getCustomerInfor,
+  getCustomerOrderHistory,
 };
