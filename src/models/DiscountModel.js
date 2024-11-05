@@ -3,17 +3,18 @@ const Schema = mongoose.Schema;
 
 const discountSchema = new Schema(
   {
-    code: { type: String, required: true, unique: true },
+    code: { type: String, required: true },
     name: { type: String, required: true },
     description: { type: String },
     discountInPercent: { type: Number, default: 0 },
     minOrderValue: { type: Number },
-    maxOrderValue: { type: Number },
+    maxDiscountValue: { type: Number },
     usageLimit: { type: Number },
     expireDate: { type: Date },
-    applicableProducts: [
-      { type: mongoose.Schema.Types.ObjectId, ref: "Product" },
-    ],
+    seller: { type: Schema.Types.ObjectId, ref: "User" },
+    // applicableProducts: [
+    //   { type: mongoose.Schema.Types.ObjectId, ref: "Product" },
+    // ],
   },
   {
     timestamps: true,

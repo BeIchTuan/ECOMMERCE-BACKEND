@@ -1,5 +1,6 @@
 const Order = require("../models/OrderModel");
 const Product = require("../models/ProductModel");
+const Discount = require("../models/DiscountModel");
 
 class OrderService {
   async getOrders(userId, page = 1, itemsPerPage = 15) {
@@ -39,7 +40,7 @@ class OrderService {
                 name: item.productId.name,
                 price: item.productId.price,
                 priceAfterSale: item.productId.priceAfterSale,
-                image: item.productId.thumbnail,
+                thumbail: item.productId.thumbnail,
               }
             : null, // Set to null or an empty object if undefined
           quantity: item.quantity,
@@ -66,49 +67,80 @@ class OrderService {
     }
   }
 
-  async createOrder(userId, items, address, paymentMethod, shippingCost) {
+  async createOrder(
+    userId,
+    items,
+    address,
+    paymentMethod,
+    shippingCost,
+    discountId
+  ) {
     try {
       const orderItems = [];
       let totalPrice = 0;
 
       for (const item of items) {
-        const product = await Product.findById(item.productId)
-          .populate("discount")
-          .exec();
+        const product = await Product.findById(item.productId).exec();
 
         if (!product) throw new Error("Product not found");
 
         const price = product.priceAfterSale;
-        let finalPrice = price;
-
-        console.log(finalPrice);
-
-        if (
-          item.voucherId &&
-          product.discount &&
-          product.discount._id.toString() === item.voucherId
-        ) {
-          finalPrice = price - product.discount.value;
-        }
-
-        const itemTotal = finalPrice * item.quantity;
+        //let finalPrice = price;
+        const itemTotal = price * item.quantity;
         totalPrice += itemTotal;
+
+        // const itemTotal = finalPrice * item.quantity;
+        // totalPrice += itemTotal;
 
         orderItems.push({
           productId: item.productId,
           quantity: item.quantity,
-          price: finalPrice,
+          price: price,
           sellerId: product.seller,
         });
       }
 
       totalPrice += shippingCost;
 
+      let discountAmount = 0;
+      let discount;
+
+      // Kiểm tra và áp dụng mã giảm giá nếu có
+      // Kiểm tra và áp dụng mã giảm giá nếu có
+      if (discountId) {
+        discount = await Discount.findById(discountId);
+
+        if (discount) {
+          // Kiểm tra điều kiện để áp dụng mã giảm giá cho đơn hàng
+          if (
+            totalPrice >= discount.minOrderValue &&
+            discount.expireDate > new Date()
+          ) {
+            const calculatedDiscount =
+              (totalPrice * discount.discountInPercent) / 100;
+            discountAmount = Math.min(
+              calculatedDiscount,
+              discount.maxDiscountValue || calculatedDiscount
+            );
+
+            // Cập nhật lại tổng giá sau khi áp dụng giảm giá
+            totalPrice -= discountAmount;
+          } else {
+            throw new Error(
+              "Discount code is invalid or does not meet the order conditions"
+            );
+          }
+        } else {
+          throw new Error("Discount not found");
+        }
+      }
+
       const newOrder = new Order({
         userId,
         items: orderItems,
         address,
         totalPrice,
+        discount: discount ? discount._id : null,
         paymentMethod,
         shippingCost,
         deliveryStatus: "pending",

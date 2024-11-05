@@ -28,6 +28,7 @@ const orderSchema = new Schema(
       enum: ["pending", "preparing", "delivering", "delivered", "success"],
       default: "pending",
     },
+    discount: { type: Schema.Types.ObjectId, ref: "Discount" }, // Thêm discount
     createdAt: { type: Date, default: Date.now },
   },
   { timestamps: true }

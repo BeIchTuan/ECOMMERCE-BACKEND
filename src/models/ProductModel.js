@@ -25,7 +25,7 @@ const productSchema = new Schema({
   salePercent: { type: Number, dafault: 0},
   priceAfterSale: { type: Number},
   image: [{ type: String, required: true }],
-  discount: { type: Schema.Types.ObjectId, ref: "Discount" },
+  //discount: { type: Schema.Types.ObjectId, ref: "Discount" },
   rates: [{ type: Schema.Types.ObjectId, ref: "Rate" }],
   seller: { type: Schema.Types.ObjectId, ref: "User" },
   sold: { type: Number, default: 0 },

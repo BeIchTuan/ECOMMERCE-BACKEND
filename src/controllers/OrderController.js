@@ -19,7 +19,7 @@ class OrderController {
 
   async createOrder(req, res) {
     try {
-      const { items, address, paymentMethod, shippingCost } = req.body;
+      const { items, address, paymentMethod, shippingCost, discountId} = req.body;
       const userId = req.id;
 
       const orderData = await OrderService.createOrder(
@@ -27,7 +27,8 @@ class OrderController {
         items,
         address,
         paymentMethod,
-        shippingCost
+        shippingCost,
+        discountId
       );
 
       res.status(201).json({
