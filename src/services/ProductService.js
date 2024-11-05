@@ -64,8 +64,8 @@ class ProductService {
         name: product.name,
         description: product.description,
         price: product.price,
-        salePercent: product.salePercent,
-        priceAfterSale: product.priceAfterSale,
+        salePercent: product.salePercent || 0,
+        priceAfterSale: product.priceAfterSale || product.price,
         inStock: product.inStock,
         sold: product.sold,
         shopInfo: {
@@ -80,7 +80,7 @@ class ProductService {
           name: skuItem.name,
           classification: skuItem.classifications,
         })),
-        discount: product.discount ? product.discount.discountInPercent : 0,
+        //discount: product.discount ? product.discount.discountInPercent : 0,
         averageStar: product.averageStar,
         reviews,
         images: product.image,
@@ -297,8 +297,8 @@ class ProductService {
         name: product.name,
         description: product.description,
         price: product.price,
-        salePercent: product.salePercent,
-        priceAfterSale: product.priceAfterSale,
+        salePercent: product.salePercent || 0,
+        priceAfterSale: product.priceAfterSale || product.price,
         shop: product.seller
           ? {
               id: product.seller._id.toString(),
