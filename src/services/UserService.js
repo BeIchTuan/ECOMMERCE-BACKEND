@@ -343,6 +343,8 @@ const getFavoriteProducts = (userId) => {
         name: product.name,
         description: product.description,
         price: product.price,
+        salePercent: product.salePercent,
+        priceAfterSale: product.priceAfterSale,
         isFavorite: true,
         shopInfor: product.seller
           ? {

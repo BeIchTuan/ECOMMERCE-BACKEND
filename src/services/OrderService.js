@@ -38,6 +38,7 @@ class OrderService {
                 id: item.productId,
                 name: item.productId.name,
                 price: item.productId.price,
+                priceAfterSale: item.productId.priceAfterSale,
                 image: item.productId.thumbnail,
               }
             : null, // Set to null or an empty object if undefined
@@ -77,10 +78,10 @@ class OrderService {
 
         if (!product) throw new Error("Product not found");
 
-        const price = product.price;
+        const price = product.priceAfterSale;
         let finalPrice = price;
 
-        console.log(finalPrice)
+        console.log(finalPrice);
 
         if (
           item.voucherId &&
@@ -173,6 +174,8 @@ class OrderService {
             id: item.productId._id,
             name: item.productId.name,
             price: item.productId.price,
+            salePercent: item.productId.salePercent,
+            priceAfterSale: item.productId.priceAfterSale,
             image: item.productId.thumbnail, // Assuming product has an image field
           },
           quantity: item.quantity,
@@ -264,6 +267,8 @@ class OrderService {
                 id: item.productId,
                 name: item.productId.name,
                 price: item.productId.price,
+                salePercent: item.productId.salePercent,
+                priceAfterSale: item.productId.priceAfterSale,
                 image: item.productId.thumbnail,
               }
             : null, // Set to null or an empty object if undefined
@@ -292,20 +297,20 @@ class OrderService {
   async updateOrderStatus(orderId, status) {
     try {
       const order = await Order.findById(orderId).populate("items.productId");
-  
+
       if (!order) {
         return { success: false };
       }
-  
+
       // Update the delivery status
       order.deliveryStatus = status;
-  
+
       // If the status is "success," increase the sold count for each product
       if (status === "success") {
         for (const item of order.items) {
           const product = item.productId;
           const quantity = item.quantity || 1; // Use the ordered quantity, default to 1 if not provided
-  
+
           // Increment the sold count by the quantity ordered
           await Product.findByIdAndUpdate(
             product._id,
@@ -314,18 +319,17 @@ class OrderService {
           );
         }
       }
-  
+
       await order.save();
-  
+
       return { success: true };
     } catch (error) {
       console.error(error);
       return {
-        success: false
+        success: false,
       };
     }
   }
-  
 }
 
 module.exports = new OrderService();
