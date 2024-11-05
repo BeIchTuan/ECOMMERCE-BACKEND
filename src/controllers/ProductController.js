@@ -3,8 +3,9 @@ const ProductService = require("../services/ProductService");
 
 class ProductController {
   // Tạo sản phẩm mới
-  async createProduct(req, res) {    
-    const { name, price, inStock, description, category, SKU, image } = req.body;
+  async createProduct(req, res) {
+    const { name, price, inStock, description, category, SKU, image } =
+      req.body;
 
     // Kiểm tra nếu các trường bắt buộc chưa được nhập
     if (!name || !price || !inStock || !SKU || !category) {
@@ -24,8 +25,9 @@ class ProductController {
         productId: product._id,
       });
     } catch (error) {
-      return res.status(500).json({ 
-        message: error.message });
+      return res.status(500).json({
+        message: error.message,
+      });
     }
   }
 
@@ -35,16 +37,20 @@ class ProductController {
       const sellerId = req.id; // Lấy sellerId từ token đã xác thực
       const productId = req.params.id;
 
-      const product = await ProductService.updateProduct(productId, sellerId, req.body);
+      const product = await ProductService.updateProduct(
+        productId,
+        sellerId,
+        req.body
+      );
       return res.status(200).json({
-        status: 'success',
+        status: "success",
         message: "Product updated successfully",
-        product: product
+        product: product,
       });
     } catch (error) {
       return res.status(400).json({
-        status: 'error',
-        message: error.message
+        status: "error",
+        message: error.message,
       });
     }
   }
@@ -53,37 +59,45 @@ class ProductController {
   async deleteProduct(req, res) {
     try {
       const sellerId = req.id; // Lấy sellerId từ token đã xác thực
-      const productId = req.params.id
+      const productId = req.params.id;
       await ProductService.deleteProduct(productId, sellerId);
       return res.status(200).json({
-        status: 'success',
-        message: 'Product deleted successfully'
+        status: "success",
+        message: "Product deleted successfully",
       });
     } catch (error) {
       return res.status(400).json({
-        status: 'error',
-        message: 'Failed to delete product: ' + error.message
+        status: "error",
+        message: "Failed to delete product: " + error.message,
       });
     }
-  };
+  }
   //Lấy tất cả sản phẩm trong shop
   async getAllShopProduct(req, res) {
     try {
-      const sellerId = req.params.id; // Lấy id seller
+      const sellerId = req.params.id;
+      const page = parseInt(req.query.page) || 1;
+      const itemsPerPage = parseInt(req.query.itemsPerPage) || 15;
 
-      const product = await ProductService.getAllShopProducts(sellerId);
+      const result = await ProductService.getAllShopProducts(
+        sellerId,
+        page,
+        itemsPerPage
+      );
+
       return res.status(200).json({
-        status: 'success',
+        status: "success",
         message: "Get products successfully",
-        products: product
+        pagination: result.pagination,
+        products: result.products,
       });
     } catch (error) {
       return res.status(400).json({
-        status: 'error',
-        message: error.message
+        status: "error",
+        message: error.message,
       });
     }
-  };
+  }
 
   //Lấy danh sách sản phẩm khuyến nghị cho khách hàng
   async getRecommendedProducts(req, res) {
@@ -93,7 +107,11 @@ class ProductController {
       const page = parseInt(req.query.page) || 1;
       const limit = parseInt(req.query.limit) || 15;
 
-      const result = await ProductService.getRecommendedProducts(page, limit, userId);
+      const result = await ProductService.getRecommendedProducts(
+        page,
+        limit,
+        userId
+      );
       res.status(200).json(result);
     } catch (error) {
       res.status(500).json({ message: error.message });
@@ -107,24 +125,29 @@ class ProductController {
       const userId = req.id;
       const product = await ProductService.getProductDetails(productId, userId);
       return res.status(200).json({
-        status: 'success',
+        status: "success",
         message: "Get product details successfully",
-        product: product
+        product: product,
       });
     } catch (error) {
       return res.status(400).json({
-        status: 'error',
-        message: error.message
+        status: "error",
+        message: error.message,
       });
     }
-  };
+  }
 
   async searchProducts(req, res) {
     try {
       const { name, categoryId, page = 1, itemsPerPage = 15 } = req.query;
-  
-      const products = await ProductService.searchProducts({ name, categoryId, page, itemsPerPage });
-  
+
+      const products = await ProductService.searchProducts({
+        name,
+        categoryId,
+        page,
+        itemsPerPage,
+      });
+
       res.json({
         status: "success",
         products,
@@ -132,8 +155,7 @@ class ProductController {
     } catch (error) {
       res.status(500).json({ status: "error", message: error.message });
     }
-  };
-  
+  }
 }
 
 module.exports = new ProductController();

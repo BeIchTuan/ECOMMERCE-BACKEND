@@ -37,7 +37,7 @@ class ProductService {
           populate: { path: "user", select: "avatar name" },
         })
         .lean();
-        
+
       if (!product) throw new Error("Product not found");
 
       const user = await User.findById(userId).select("favoriteProducts");
@@ -64,6 +64,8 @@ class ProductService {
         name: product.name,
         description: product.description,
         price: product.price,
+        salePercent: product.salePercent,
+        priceAfterSale: product.priceAfterSale,
         inStock: product.inStock,
         sold: product.sold,
         shopInfo: {
@@ -104,6 +106,13 @@ class ProductService {
       }
 
       Object.assign(product, data);
+
+      if (data.salePercent !== undefined) {
+        const discount = (data.salePercent / 100) * product.price;
+        product.priceAfterSale =
+          Math.round((product.price - discount) * 100) / 100;
+      }
+
       return await product.save();
     } catch (error) {
       throw new Error("Failed to update product: " + error.message);
@@ -131,19 +140,37 @@ class ProductService {
   }
 
   // Lấy tất cả sản phẩm của shop
-  async getAllShopProducts(sellerId) {
+  async getAllShopProducts(sellerId, page = 1, itemsPerPage = 15) {
     try {
-      // Tìm tất cả sản phẩm của shop dựa trên sellerId
-      const products = await Product.find({ seller: sellerId }).populate(
-        "category",
-        "name"
-      );
+      // Calculate skip and limit for pagination
+      const skip = (page - 1) * itemsPerPage;
 
+      // Get the total count of products for this seller
+      const totalItems = await Product.countDocuments({ seller: sellerId });
+
+      // Fetch products with pagination and populate category name
+      const products = await Product.find({ seller: sellerId })
+        .populate("category", "name")
+        .skip(skip)
+        .limit(itemsPerPage);
+
+      // If no products are found, throw an error
       if (products.length === 0) {
         throw new Error("No products found for this shop");
       }
 
-      return products;
+      // Calculate total pages
+      const totalPages = Math.ceil(totalItems / itemsPerPage);
+
+      return {
+        pagination: {
+          currentPage: page,
+          totalPages: totalPages,
+          itemsPerPage: itemsPerPage,
+          totalItems: totalItems,
+        },
+        products: products,
+      };
     } catch (error) {
       throw new Error("Error retrieving products: " + error.message);
     }
@@ -270,6 +297,8 @@ class ProductService {
         name: product.name,
         description: product.description,
         price: product.price,
+        salePercent: product.salePercent,
+        priceAfterSale: product.priceAfterSale,
         shop: product.seller
           ? {
               id: product.seller._id.toString(),
