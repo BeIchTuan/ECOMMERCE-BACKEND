@@ -13,7 +13,7 @@ class OrderService {
       const orders = await Order.find({ userId: userId })
         .populate({
           path: "items.productId",
-          select: "id name price thumbnail",
+          select: "id name price priceAfterSale image",
         })
         .sort({ createdAt: -1 })
         .skip(skip)
@@ -32,19 +32,21 @@ class OrderService {
           location: order.address.location,
           phone: order.address.phone,
         },
-        items: order.items.map((item) => ({
-          product: item.productId
-            ? {
-                // Check if `product` is defined
-                id: item.productId,
-                name: item.productId.name,
-                price: item.productId.price,
-                priceAfterSale: item.productId.priceAfterSale,
-                thumbail: item.productId.thumbnail,
-              }
-            : null, // Set to null or an empty object if undefined
-          quantity: item.quantity,
-        })),
+        items: order.items.map((item) => {
+          const product = item.productId?.toJSON(); // Convert to JSON to include virtuals
+          return {
+            product: product
+              ? {
+                  id: item.productId._id,
+                  name: product.name,
+                  price: product.price,
+                  priceAfterSale: product.priceAfterSale,
+                  thumbnail: product.thumbnail, // This should now include the virtual
+                }
+              : null,
+            quantity: item.quantity,
+          };
+        }),
       }));
 
       return Promise.resolve({
@@ -114,7 +116,8 @@ class OrderService {
           // Kiểm tra điều kiện để áp dụng mã giảm giá cho đơn hàng
           if (
             totalPrice >= discount.minOrderValue &&
-            discount.expireDate > new Date()
+            discount.expireDate > new Date() &&
+            discount.usageLimit > 0
           ) {
             const calculatedDiscount =
               (totalPrice * discount.discountInPercent) / 100;
@@ -148,6 +151,11 @@ class OrderService {
       });
 
       const savedOrder = await newOrder.save();
+
+      if (discount) {
+        discount.usageLimit -= 1;
+        await discount.save();
+      }
 
       const responseItems = await Promise.all(
         orderItems.map(async (item) => {
