@@ -28,10 +28,6 @@ class ProductService {
           select: "shopName _id",
         })
         .populate({
-          path: "discount",
-          select: "discountInPercent",
-        })
-        .populate({
           path: "rates",
           select: "user star comment reply createdAt",
           populate: { path: "user", select: "avatar name" },
