@@ -22,6 +22,8 @@ const productSchema = new Schema({
     { type: Schema.Types.ObjectId, ref: "Categories", required: true },
   ],
   inStock: { type: Number, required: true },
+  salePercent: { type: Number, dafault: 0},
+  priceAfterSale: { type: Number},
   image: [{ type: String, required: true }],
   discount: { type: Schema.Types.ObjectId, ref: "Discount" },
   rates: [{ type: Schema.Types.ObjectId, ref: "Rate" }],
@@ -37,6 +39,14 @@ productSchema.virtual("thumbnail").get(function () {
   return Array.isArray(this.image) && this.image.length > 0
     ? this.image[0]
     : null;
+});
+
+// Set priceAfterSale to the same as price if it is not set explicitly
+productSchema.pre("save", function (next) {
+  if (this.priceAfterSale === undefined) {
+    this.priceAfterSale = this.price;
+  }
+  next();
 });
 
 // Ensure virtuals are included in JSON responses
