@@ -3,7 +3,9 @@ const discountService = require("../services/DiscountService");
 class DiscountController {
   async createDiscount(req, res) {
     try {
-      const discount = await discountService.createDiscount(req.body);
+      // Assuming the authenticated seller's ID is available as `req.user.id`
+      const sellerId = req.id;
+      const discount = await discountService.createDiscount(req.body, sellerId);
       res.status(201).json({
         status: "success",
         message: "Discount added successfully",
@@ -17,13 +19,15 @@ class DiscountController {
   async getAllDiscounts(req, res) {
     try {
       // Lấy `page` và `limit` từ query parameters
+      const sellerId = req.params.sellerId;
       const page = parseInt(req.query.page) || 1;
       const limit = parseInt(req.query.limit) || 15;
 
       // Gọi service để lấy danh sách mã giảm giá với phân trang
       const { discounts, pagination } = await discountService.getAllDiscounts(
         page,
-        limit
+        limit,
+        sellerId
       );
 
       // Trả về kết quả với cấu trúc yêu cầu
@@ -51,9 +55,11 @@ class DiscountController {
 
   async updateDiscount(req, res) {
     try {
+      const sellerId = req.id;
       const discount = await discountService.updateDiscount(
         req.params.discountId,
-        req.body
+        req.body,
+        sellerId
       );
       if (!discount) {
         return res.status(404).json({ message: "Discount not found" });
@@ -66,7 +72,11 @@ class DiscountController {
 
   async deleteDiscount(req, res) {
     try {
-      const discount = await discountService.deleteDiscount(req.params.discountId);
+      const sellerId = req.id;
+      const discount = await discountService.deleteDiscount(
+        req.params.discountId,
+        sellerId
+      );
       if (!discount) {
         return res.status(404).json({ message: "Discount not found" });
       }
