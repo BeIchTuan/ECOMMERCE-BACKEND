@@ -39,8 +39,12 @@ class CartService {
             return null;
           }
 
-          const discount = product.discount ? 0.1 * product.price : 0;
-          const totalPrice = (product.price - discount) * item.quantity;
+          const discount = (product.price * (product.salePercent || 0)) / 100;
+          const finalPrice =
+            product.priceAfterSale !== undefined
+              ? product.priceAfterSale
+              : product.price - discount;
+          const totalPrice = finalPrice * item.quantity;
           totalAmount += totalPrice;
 
           return {
@@ -54,7 +58,7 @@ class CartService {
             },
             price: product.price,
             totalPrice,
-            isDiscount: !!product.discount,
+            isDiscount: !!product.salePercent,
             discount,
             inStock: product.inStock,
             thumbnail: product.thumbnail,
@@ -62,8 +66,8 @@ class CartService {
             SKU: product.SKU.map((sku) => ({
               name: sku.name,
               classifications: sku.classifications,
-              selected: null,
             })),
+            selected: item.selected,
           };
         })
         .filter((item) => item !== null); // Lọc bỏ các mục null
@@ -106,6 +110,7 @@ class CartService {
         const cartItem = new CartItem({
           product: product.id,
           quantity: product.quantity,
+          selected: product.selected,
         });
 
         // Lưu CartItem vào database

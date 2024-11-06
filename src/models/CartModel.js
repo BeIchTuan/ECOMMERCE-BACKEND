@@ -5,6 +5,7 @@ const Schema = mongoose.Schema;
 const cartItemSchema = new Schema({
     product: { type: Schema.Types.ObjectId, ref: 'Product' },
     quantity: { type: Number, required: true },
+    selected: {type: String}
 });
 
 // Định nghĩa model CartItem

@@ -72,9 +72,9 @@ class ProductService {
           id: cat._id,
           name: cat.name,
         })),
-        sku: (product.SKU || []).map((skuItem) => ({
+        SKU: (product.SKU || []).map((skuItem) => ({
           name: skuItem.name,
-          classification: skuItem.classifications,
+          classifications: skuItem.classifications,
         })),
         //discount: product.discount ? product.discount.discountInPercent : 0,
         averageStar: product.averageStar,
