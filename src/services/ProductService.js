@@ -174,36 +174,6 @@ class ProductService {
 
   //Lấy danh sách sản phẩm khuyến nghị cho khách hàng
   async getRecommendedProducts(page = 1, itemsPerPage = 15, userId) {
-    // try {
-    //   const skip = (page - 1) * itemsPerPage;
-
-    //   // Tìm người dùng và lấy danh sách danh mục yêu thích
-    //   const user = await User.findById(userId);
-    //   const favoriteProducts = user.favoriteProducts || []; // Giả sử `favoriteProducts` chứa danh sách các ObjectId của danh mục
-    //   console.log(user.favoriteProducts)
-
-    //   // Lọc sản phẩm dựa trên danh mục yêu thích của người dùng
-    //   const products = await Product.find({ product: { $in: favoriteProducts } })
-    //     .skip(skip)
-    //     .limit(itemsPerPage)
-    //     .populate('product', 'name'); // Lấy tên của product
-
-    //   // Đếm tổng số sản phẩm để tính tổng số trang
-    //   const totalItems = await Product.countDocuments({ product: { $in: favoriteProducts } });
-    //   const totalPages = Math.ceil(totalItems / itemsPerPage);
-
-    //   return {
-    //     products,
-    //     pagination: {
-    //       currentPage: page,
-    //       totalPages,
-    //       itemsPerPage,
-    //       totalItems
-    //     }
-    //   };
-    // } catch (error) {
-    //   throw new Error(error.message);
-    // }
     try {
       const skip = (page - 1) * itemsPerPage;
 
@@ -253,7 +223,7 @@ class ProductService {
     }
   }
 
-  async searchProducts({ name, categoryId, page = 1, itemsPerPage = 15 }) {
+  async searchProducts({userId, name, categoryId, page = 1, itemsPerPage = 15 }) {
     try {
       const query = {};
 
@@ -272,48 +242,38 @@ class ProductService {
 
       // Tìm kiếm sản phẩm với phân trang
       const products = await Product.find(query)
-        .populate({
-          path: "category",
-          select: "id name",
-        })
-        .populate({
-          path: "seller",
-          select: "id shopName",
-        })
         .skip(skip)
-        .limit(parseInt(itemsPerPage)) // Chuyển `limit` thành số nguyên
-        .select("id name description price discount rates image");
+        .limit(itemsPerPage)
+        .populate("seller", "shopName"); // .populate('product', 'name'); // Populate with product name
 
+      const user = await User.findById(userId).select("favoriteProducts");
+
+      const favoriteProductIds = user
+        ? user.favoriteProducts.map((prod) => prod.toString())
+        : [];
+
+      // Count total products to calculate total pages
       const totalItems = await Product.countDocuments(query);
       const totalPages = Math.ceil(totalItems / itemsPerPage);
 
-      // Định dạng dữ liệu trả về
-      const formattedProducts = products.map((product) => ({
-        id: product._id.toString(),
-        name: product.name,
-        description: product.description,
-        price: product.price,
-        salePercent: product.salePercent || 0,
-        priceAfterSale: product.priceAfterSale || product.price,
-        shop: product.seller
+      const formattedProducts = products.map((product) => {
+        const productObj = product.toObject(); // Chuyển product thành đối tượng JavaScript thuần
+        const shopInfor = product.seller
           ? {
-              id: product.seller._id.toString(),
-              name: product.seller.shopName,
+              shopId: product.seller._id,
+              shopName: product.seller.shopName,
             }
-          : null,
-        category: product.category.map((cat) => ({
-          id: cat._id.toString(),
-          name: cat.name,
-        })),
-        discount: product.discount ? product.discount._id.toString() : null,
-        rates: {
-          star: product.rate || 0,
-        },
-        image: product.thumbnail || "",
-      }));
+          : null;
+
+        const isFavorite = favoriteProductIds.includes(product._id.toString()); // Kiểm tra sản phẩm có trong danh sách yêu thích không
+
+        delete productObj.seller; // Xóa trường seller khỏi product
+
+        return { ...productObj, shopInfor, isFavorite }; // Thêm shopInfo và isFavourite vào phản hồi
+      });
 
       return {
-        formattedProducts,
+        products: formattedProducts,
         pagination: {
           currentPage: page,
           totalPages,

@@ -139,9 +139,11 @@ class ProductController {
 
   async searchProducts(req, res) {
     try {
-      const { name, categoryId, page = 1, itemsPerPage = 15 } = req.query;
+      const userId = req.id || null;
+      const {name, categoryId, page = 1, itemsPerPage = 15 } = req.query;
 
       const products = await ProductService.searchProducts({
+        userId,
         name,
         categoryId,
         page,
@@ -150,8 +152,9 @@ class ProductController {
 
       res.json({
         status: "success",
-        products: products.formattedProducts,
-        pagination: products.pagination
+        products
+        //products: products.formattedProducts,
+        //pagination: products.pagination
       });
     } catch (error) {
       res.status(500).json({ status: "error", message: error.message });
