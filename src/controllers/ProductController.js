@@ -150,7 +150,8 @@ class ProductController {
 
       res.json({
         status: "success",
-        products,
+        products: products.formattedProducts,
+        pagination: products.pagination
       });
     } catch (error) {
       res.status(500).json({ status: "error", message: error.message });
