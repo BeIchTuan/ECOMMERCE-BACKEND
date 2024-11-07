@@ -63,11 +63,11 @@ class CartService {
             inStock: product.inStock,
             thumbnail: product.thumbnail,
             quantity: item.quantity,
-            SKU: product.SKU.map((sku) => ({
+            SKU: item.SKU.map((sku) => ({
               name: sku.name,
               classifications: sku.classifications,
+              selected: sku.selected,
             })),
-            selected: item.selected,
           };
         })
         .filter((item) => item !== null); // Lọc bỏ các mục null
@@ -92,6 +92,8 @@ class CartService {
         );
       }
 
+      console.log(cartBody);
+
       // Tìm giỏ hàng của người dùng dựa trên userId
       let cart = await Cart.findOne({ user: userId });
 
@@ -106,11 +108,16 @@ class CartService {
 
       // Duyệt qua từng sản phẩm trong `products` từ FE gửi đến
       for (const product of cartBody.products) {
-        // Tạo một CartItem mới cho từng sản phẩm
+        const skuData = product.SKU.map((sku) => ({
+          name: sku.name,
+          classifications: sku.classifications,
+          selected: sku.selected,
+        }));
+
         const cartItem = new CartItem({
           product: product.id,
           quantity: product.quantity,
-          selected: product.selected,
+          SKU: skuData,
         });
 
         // Lưu CartItem vào database
