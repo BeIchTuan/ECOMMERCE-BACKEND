@@ -7,10 +7,17 @@ class ProductService {
   // Tạo sản phẩm mới
   async createProduct(data, sellerId) {
     try {
+
       const newProduct = new Product({
         ...data,
         seller: sellerId,
       });
+
+      if (data.salePercent !== undefined) {
+        const discount = (data.salePercent / 100) * newProduct.price;
+        newProduct.priceAfterSale =
+          Math.round((newProduct.price - discount) * 100) / 100;
+      }
 
       return await newProduct.save();
     } catch (error) {

@@ -4,7 +4,7 @@ const ProductService = require("../services/ProductService");
 class ProductController {
   // Tạo sản phẩm mới
   async createProduct(req, res) {
-    const { name, price, inStock, description, category, SKU, image } =
+    const { name, price, inStock, description, category, SKU, image, salePercent } =
       req.body;
 
     // Kiểm tra nếu các trường bắt buộc chưa được nhập
@@ -152,9 +152,8 @@ class ProductController {
 
       res.json({
         status: "success",
-        products
-        //products: products.formattedProducts,
-        //pagination: products.pagination
+        products: products.products,
+        pagination: products.pagination
       });
     } catch (error) {
       res.status(500).json({ status: "error", message: error.message });
