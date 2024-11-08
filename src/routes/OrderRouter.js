@@ -3,11 +3,14 @@ const router = express.Router();
 const OrderController = require("../controllers/OrderController");
 const { authMiddleware } = require('../middlewares/authMiddleware');
 
+//get methods
+router.get("/orders/methods/delivery", OrderController.getDeliveryMethods);
+router.get("/orders/methods/payment", OrderController.getPaymentMethods);
+
 //Route for customer
 router.get("/orders", authMiddleware(['user']), OrderController.getOrders);
 router.post("/orders", authMiddleware(['user']), OrderController.createOrder);
 router.put("/orders/:id", authMiddleware(['user']), OrderController.cancelOrder);
-
 router.get("/orders/:id", authMiddleware(['user', 'seller']), OrderController.getOrderDetails);
 
 //Route for seller

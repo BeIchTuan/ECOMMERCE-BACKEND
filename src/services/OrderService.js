@@ -6,7 +6,7 @@ class OrderService {
   async getOrders(userId, page = 1, itemsPerPage = 15) {
     try {
       const skip = (page - 1) * itemsPerPage;
-      // Lấy tổng số lượng đơn hàng để tính tổng trang
+      // Get the total count of orders for pagination
       const totalOrders = await Order.countDocuments({ userId: userId });
       const totalPages = Math.ceil(totalOrders / itemsPerPage);
 
@@ -15,6 +15,8 @@ class OrderService {
           path: "items.productId",
           select: "id name price priceAfterSale image",
         })
+        .populate("paymentMethod", "name") // Populate `name` field from `PaymentMethod` collection
+        .populate("deliveryMethod", "name") // Populate `name` field from `DeliveryMethod` collection
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(itemsPerPage);
@@ -23,7 +25,8 @@ class OrderService {
         orderId: order._id,
         orderDate: order.createdAt,
         totalPrice: order.totalPrice,
-        paymentMethod: order.paymentMethod,
+        paymentMethod: order.paymentMethod ? order.paymentMethod.name : null, // Access `name` if `paymentMethod` is populated
+        deliveryMethod: order.deliveryMethod ? order.deliveryMethod.name : null, // Access `name` if `deliveryMethod` is populated
         paymentStatus: order.paymentStatus,
         shippingCost: order.shippingCost,
         deliveryStatus: order.deliveryStatus,
@@ -41,15 +44,16 @@ class OrderService {
                   name: product.name,
                   price: product.price,
                   priceAfterSale: product.priceAfterSale,
-                  thumbnail: product.thumbnail, // This should now include the virtual
+                  thumbnail: product.thumbnail, // Assuming thumbnail is a virtual field
                 }
               : null,
             quantity: item.quantity,
+            SKU: item.SKU,
           };
         }),
       }));
 
-      return Promise.resolve({
+      return {
         status: "success",
         orders: formattedOrders,
         pagination: {
@@ -58,7 +62,7 @@ class OrderService {
           itemsPerPage,
           totalOrders,
         },
-      });
+      };
     } catch (error) {
       console.error("Error retrieving orders:", error.message); // Log error details
       return {
@@ -73,7 +77,8 @@ class OrderService {
     userId,
     items,
     address,
-    paymentMethod,
+    paymentMethodId,
+    deliveryMethodId,
     shippingCost,
     discountId
   ) {
@@ -97,6 +102,7 @@ class OrderService {
         orderItems.push({
           productId: item.productId,
           quantity: item.quantity,
+          SKU: item.SKU,
           price: price,
           sellerId: product.seller,
         });
@@ -143,8 +149,9 @@ class OrderService {
         items: orderItems,
         address,
         totalPrice,
+        paymentMethod: paymentMethodId,
+        deliveryMethod: deliveryMethodId,
         discount: discount ? discount._id : null,
-        paymentMethod,
         shippingCost,
         deliveryStatus: "pending",
         paymentStatus: "pending",
@@ -168,6 +175,7 @@ class OrderService {
               image: product.thumbnail,
             },
             quantity: item.quantity,
+            SKU: item.SKU,
           };
         })
       );
@@ -177,6 +185,7 @@ class OrderService {
         orderDate: savedOrder.createdAt,
         totalPrice: savedOrder.totalPrice,
         paymentMethod: savedOrder.paymentMethod,
+        deliveryMethod: savedOrder.deliveryMethod,
         shippingCost: savedOrder.shippingCost,
         deliveryStatus: savedOrder.deliveryStatus,
         paymentStatus: savedOrder.paymentStatus,
@@ -190,7 +199,10 @@ class OrderService {
 
   async getOrderDetails(orderId) {
     try {
-      const order = await Order.findById(orderId).populate("items.productId"); // Populate product details
+      const order = await Order.findById(orderId)
+        .populate("items.productId")
+        .populate("paymentMethod", "name") // Lấy field `name` từ `PaymentMethod`
+        .populate("deliveryMethod", "name"); // Lấy field `name` từ `DeliveryMethod`; // Populate product details
 
       if (!order) {
         throw new Error("Order not found");
@@ -200,7 +212,8 @@ class OrderService {
         orderId: order._id,
         orderDate: order.createdAt,
         totalPrice: order.totalPrice,
-        paymentMethod: order.paymentMethod,
+        paymentMethod: order.paymentMethod ? order.paymentMethod.name : null, // Access `name` if `paymentMethod` is populated
+        deliveryMethod: order.deliveryMethod ? order.deliveryMethod.name : null, // Access `name` if `deliveryMethod` is populated
         shippingCost: order.shippingCost,
         deliveryStatus: order.deliveryStatus,
         paymentStatus: order.paymentStatus,
@@ -219,6 +232,7 @@ class OrderService {
             image: item.productId.thumbnail, // Assuming product has an image field
           },
           quantity: item.quantity,
+          SKU: item.SKU,
         })),
       };
     } catch (error) {
@@ -274,20 +288,25 @@ class OrderService {
       // Fetch paginated orders
       const orders = await Order.find({ "items.sellerId": sellerId })
         .skip(skip)
+        .sort({ createdAt: -1 })
         .limit(itemsPerPage)
+        .populate("paymentMethod", "name") // Lấy field `name` từ `PaymentMethod`
+        .populate("deliveryMethod", "name") // Lấy field `name` từ `DeliveryMethod`
         .populate({
           path: "userId",
           select: "name avatar phone email",
         })
         .populate({
           path: "items.productId",
-          select: "name description SKU price category image",
+          select:
+            "id name description SKU price salePercent priceAfterSale category image",
           populate: [
             { path: "category", select: "name" },
-            { path: "SKU.classifications", select: "_id name" },
+            { path: "SKU.classifications", select: "_id" },
           ],
         });
 
+      // Định dạng kết quả để tránh lặp dữ liệu
       const formattedOrders = orders.map((order) => ({
         id: order._id,
         orderDate: order.createdAt,
@@ -299,21 +318,39 @@ class OrderService {
         },
         totalPrice: order.totalPrice,
         status: order.deliveryStatus,
+        paymentMethod: order.paymentMethod ? order.paymentMethod.name : null, // Access `name` if `paymentMethod` is populated
+        deliveryMethod: order.deliveryMethod ? order.deliveryMethod.name : null, // Access `name` if `deliveryMethod` is populated
         paymentStatus: order.paymentStatus,
-        products: order.items.map((item) => ({
-          product: item.productId
+        products: order.items.map((item) => {
+          const product = item.productId
             ? {
-                // Check if `product` is defined
-                id: item.productId,
+                id: item.productId._id,
                 name: item.productId.name,
+                description: item.productId.description,
+                SKU: item.productId.SKU.map((sku) => ({
+                  name: sku.name,
+                  classifications: sku.classifications.map(
+                    (classification) => classification
+                  ),
+                  _id: sku._id,
+                })),
                 price: item.productId.price,
                 salePercent: item.productId.salePercent,
                 priceAfterSale: item.productId.priceAfterSale,
-                image: item.productId.thumbnail,
+                category: item.productId.category.map((cat) => ({
+                  id: cat._id,
+                  name: cat.name,
+                })),
+                thumbnail: item.productId.thumbnail, // Lấy ảnh đầu tiên hoặc điều chỉnh theo yêu cầu
               }
-            : null, // Set to null or an empty object if undefined
-          quantity: item.quantity,
-        })),
+            : null;
+
+          return {
+            product,
+            quantity: item.quantity,
+            SKU: item.SKU,
+          };
+        }),
       }));
 
       return {

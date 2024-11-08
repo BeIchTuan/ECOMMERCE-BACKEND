@@ -1,4 +1,6 @@
 const OrderService = require("../services/OrderService");
+const PaymentMethod = require("../models/PaymentMethodModel");
+const DeliveryMethod = require("../models/DeliveryMethodModel");
 
 class OrderController {
   async getOrders(req, res) {
@@ -19,14 +21,22 @@ class OrderController {
 
   async createOrder(req, res) {
     try {
-      const { items, address, paymentMethod, shippingCost, discountId} = req.body;
+      const {
+        items,
+        address,
+        paymentMethodId,
+        deliveryMethodId,
+        shippingCost,
+        discountId,
+      } = req.body;
       const userId = req.id;
 
       const orderData = await OrderService.createOrder(
         userId,
         items,
         address,
-        paymentMethod,
+        paymentMethodId,
+        deliveryMethodId,
         shippingCost,
         discountId
       );
@@ -111,7 +121,13 @@ class OrderController {
       const { status } = req.body;
 
       // Validate status
-      const validStatuses = ["pending", "preparing", "delivering", "delivered", "success"];
+      const validStatuses = [
+        "pending",
+        "preparing",
+        "delivering",
+        "delivered",
+        "success",
+      ];
       if (!validStatuses.includes(status)) {
         return res.status(400).json({
           status: "error",
@@ -137,6 +153,38 @@ class OrderController {
       res
         .status(500)
         .json({ status: "error", message: "Failed to accept order" });
+    }
+  }
+
+  async getPaymentMethods(req, res) {
+    try {
+      const paymentMethods = await PaymentMethod.find({});
+      return res.status(200).json({
+        success: true,
+        paymentMethods: paymentMethods,
+      });
+    } catch (error) {
+      console.error("Error fetching payment methods:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Failed to fetch payment methods.",
+      });
+    }
+  }
+
+  async getDeliveryMethods(req, res) {
+    try {
+      const deliveryMethods = await DeliveryMethod.find({});
+      return res.status(200).json({
+        success: true,
+        deliveryMethods: deliveryMethods,
+      });
+    } catch (error) {
+      console.error("Error fetching payment methods:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Failed to fetch payment methods.",
+      });
     }
   }
 }
