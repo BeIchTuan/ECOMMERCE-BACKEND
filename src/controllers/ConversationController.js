@@ -22,6 +22,29 @@ class ConversationController {
       });
     }
   }
+
+  async getUserConversations(req, res) {
+    try {
+      const userId = req.id;
+
+      console.log(userId)
+      // Tìm tất cả các cuộc hội thoại mà user là thành viên
+      const conversations = await Conversation.find({
+        members: { $in: [userId] },
+      });
+
+      return res.status(200).json({
+        status: "success",
+        conversations,
+        message: "Conversations retrieved successfully",
+      });
+    } catch (error) {
+      return res.status(500).json({
+        status: "error",
+        message: "Failed to retrieve conversations",
+      });
+    }
+  }
 }
 
 module.exports = new ConversationController()
