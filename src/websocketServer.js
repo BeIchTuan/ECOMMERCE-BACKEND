@@ -108,6 +108,7 @@ class ChatService {
         status: "success",
         members,
         messages: messages.map(msg => ({
+          messageId: msg._id,
           sender: msg.sender,
           content: msg.content,
           time: msg.timestamp
