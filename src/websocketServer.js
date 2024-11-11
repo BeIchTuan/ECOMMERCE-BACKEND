@@ -1,6 +1,7 @@
 // src/websocketServer.js
 const Message = require("./models/MessageModel");
 const Conversation = require("./models/ConversationModel");
+const User = require("./models/UserModel");
 
 class ChatService {
   constructor(wss) {
@@ -101,26 +102,50 @@ class ChatService {
   }
 
   async handleGetHistory(ws, requestData) {
-    const { conversationId } = requestData;
+    const { conversationId, userId } = requestData;
 
     try {
       // Lấy lịch sử tin nhắn từ MongoDB
-      const messages = await Message.find({ conversationId }).sort({
-        timestamp: 1,
-      });
+      const messages = await Message.find({ conversationId })
+        .sort({
+          timestamp: 1,
+        })
+        .populate({
+          path: "sender",
+          select: "name shopName avatar role",
+        });
 
       // Lấy danh sách thành viên trong cuộc hội thoại từ Conversation
       const conversation = await Conversation.findById(conversationId);
-      const members = conversation ? conversation.members : [];
+      const memberIds = conversation ? conversation.members : [];
 
-      // Phản hồi cho client với lịch sử tin nhắn
+      const recipientId = memberIds.find((id) => id.toString() !== userId);
+
+      // Lấy thông tin của người nhận
+      const recipient = await User.findById(
+        recipientId,
+        "name avatar shopName role"
+      );
+      const recipientName =
+        recipient.role === "seller" ? recipient.shopName : recipient.name;
+
+      // Phản hồi cho client với lịch sử tin nhắn và thông tin người nhận
       ws.send(
         JSON.stringify({
           status: "success",
-          members,
+          recipient: {
+            recipientId: recipient._id,
+            recipientName,
+            recipientAvatar: recipient.avatar,
+          },
           messages: messages.map((msg) => ({
             messageId: msg._id,
-            sender: msg.sender,
+            senderId: msg.sender._id,
+            senderName:
+              msg.sender.role === "seller"
+                ? msg.sender.shopName
+                : msg.sender.name,
+            senderAvatar: msg.sender.avatar,
             content: msg.content,
             time: msg.timestamp,
           })),
