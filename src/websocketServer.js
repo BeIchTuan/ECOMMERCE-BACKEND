@@ -8,17 +8,17 @@ class ChatService {
     this.clients = {}; // Lưu trữ client theo userId
 
     // Khởi động sự kiện connection
-    this.wss.on('connection', (ws) => this.handleConnection(ws));
+    this.wss.on("connection", (ws) => this.handleConnection(ws));
   }
 
   handleConnection(ws) {
     console.log("A new client connected");
 
     // Xử lý các tin nhắn từ client
-    ws.on('message', (data) => this.handleMessage(ws, data));
+    ws.on("message", (data) => this.handleMessage(ws, data));
 
     // Xử lý khi client đóng kết nối
-    ws.on('close', () => {
+    ws.on("close", () => {
       console.log("Client disconnected");
       this.removeClient(ws);
     });
@@ -42,14 +42,14 @@ class ChatService {
     const messageData = JSON.parse(data);
 
     // Kiểm tra loại tin nhắn và gọi hàm xử lý tương ứng
-    if (messageData.type === 'register') {
+    if (messageData.type === "register") {
       // Đăng ký người dùng
       const { userId } = messageData;
       this.addClient(userId, ws);
       console.log(`User registered with ID: ${userId}`);
-    } else if (messageData.type === 'chatMessage') {
+    } else if (messageData.type === "chatMessage") {
       await this.handleChatMessage(ws, messageData);
-    } else if (messageData.type === 'getHistory') {
+    } else if (messageData.type === "getHistory") {
       await this.handleGetHistory(ws, messageData);
     }
   }
@@ -65,30 +65,38 @@ class ChatService {
         content,
         timestamp: new Date(),
       });
+
       await newMessage.save();
 
       // Phản hồi thành công cho client gửi tin nhắn
-      ws.send(JSON.stringify({
-        status: "success",
-        message: "Message sent successfully"
-      }));
+      ws.send(
+        JSON.stringify({
+          status: "success",
+          message: "Message sent successfully",
+        })
+      );
 
       // Gửi tin nhắn cho người nhận nếu họ đang kết nối
       const recipientSocket = this.clients[recipientId];
       if (recipientSocket) {
-        recipientSocket.send(JSON.stringify({
-          type: "chatMessage",
-          conversationId,
-          sender,
-          content,
-          timestamp: new Date()
-        }));
+        recipientSocket.send(
+          JSON.stringify({
+            type: "chatMessage",
+            conversationId,
+            sender,
+            content,
+            timestamp: new Date(),
+          })
+        );
       }
     } catch (error) {
-      ws.send(JSON.stringify({
-        status: "error",
-        message: "Failed to send message"
-      }));
+      console.log("Failed to save message:", error); // Log lỗi nếu có
+      ws.send(
+        JSON.stringify({
+          status: "error",
+          message: "Failed to send message",
+        })
+      );
     }
   }
 
@@ -97,28 +105,34 @@ class ChatService {
 
     try {
       // Lấy lịch sử tin nhắn từ MongoDB
-      const messages = await Message.find({ conversationId }).sort({ timestamp: 1 });
+      const messages = await Message.find({ conversationId }).sort({
+        timestamp: 1,
+      });
 
       // Lấy danh sách thành viên trong cuộc hội thoại từ Conversation
       const conversation = await Conversation.findById(conversationId);
       const members = conversation ? conversation.members : [];
 
       // Phản hồi cho client với lịch sử tin nhắn
-      ws.send(JSON.stringify({
-        status: "success",
-        members,
-        messages: messages.map(msg => ({
-          messageId: msg._id,
-          sender: msg.sender,
-          content: msg.content,
-          time: msg.timestamp
-        }))
-      }));
+      ws.send(
+        JSON.stringify({
+          status: "success",
+          members,
+          messages: messages.map((msg) => ({
+            messageId: msg._id,
+            sender: msg.sender,
+            content: msg.content,
+            time: msg.timestamp,
+          })),
+        })
+      );
     } catch (error) {
-      ws.send(JSON.stringify({
-        status: "error",
-        message: "Failed to retrieve messages"
-      }));
+      ws.send(
+        JSON.stringify({
+          status: "error",
+          message: "Failed to retrieve messages",
+        })
+      );
     }
   }
 }
