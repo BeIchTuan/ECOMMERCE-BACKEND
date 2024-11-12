@@ -12,9 +12,6 @@ const discountSchema = new Schema(
     usageLimit: { type: Number },
     expireDate: { type: Date },
     seller: { type: Schema.Types.ObjectId, ref: "User" },
-    // applicableProducts: [
-    //   { type: mongoose.Schema.Types.ObjectId, ref: "Product" },
-    // ],
   },
   {
     timestamps: true,

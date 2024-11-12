@@ -12,6 +12,7 @@ const cartItemSchema = new Schema({
       selected: String,
     },
   ],
+  isSelected: {type: Boolean, default: false}
 });
 
 // Định nghĩa model CartItem

@@ -26,7 +26,6 @@ class OrderController {
         address,
         paymentMethodId,
         deliveryMethodId,
-        shippingCost,
         discountId,
       } = req.body;
       const userId = req.id;
@@ -37,7 +36,6 @@ class OrderController {
         address,
         paymentMethodId,
         deliveryMethodId,
-        shippingCost,
         discountId
       );
 

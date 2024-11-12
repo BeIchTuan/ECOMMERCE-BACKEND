@@ -49,7 +49,7 @@ class CartService {
 
           return {
             cartItemId: item._id.toString(),
-            isSelected: false,
+            isSelected: item.isSelected,
             id: product._id.toString(),
             name: product.name,
             shopInfo: {
@@ -92,8 +92,6 @@ class CartService {
         );
       }
 
-      console.log(cartBody);
-
       // Tìm giỏ hàng của người dùng dựa trên userId
       let cart = await Cart.findOne({ user: userId });
 
@@ -118,6 +116,7 @@ class CartService {
           product: product.id,
           quantity: product.quantity,
           SKU: skuData,
+          isSelected: product.isSelected || false,
         });
 
         // Lưu CartItem vào database

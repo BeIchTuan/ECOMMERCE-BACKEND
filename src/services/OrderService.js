@@ -79,7 +79,6 @@ class OrderService {
     address,
     paymentMethodId,
     deliveryMethodId,
-    shippingCost,
     discountId
   ) {
     try {
@@ -96,9 +95,6 @@ class OrderService {
         const itemTotal = price * item.quantity;
         totalPrice += itemTotal;
 
-        // const itemTotal = finalPrice * item.quantity;
-        // totalPrice += itemTotal;
-
         orderItems.push({
           productId: item.productId,
           quantity: item.quantity,
@@ -108,6 +104,12 @@ class OrderService {
         });
       }
 
+      let shippingCost = 0;
+      if (deliveryMethodId === "672e2ca1bcb7d35fd0794be3") {
+        shippingCost = 60000; //express
+      } else if (deliveryMethodId === "672e2ca1bcb7d35fd0794be4") {
+        shippingCost = 30000; //economy
+      }
       totalPrice += shippingCost;
 
       let discountAmount = 0;
@@ -164,6 +166,10 @@ class OrderService {
         await discount.save();
       }
 
+      const populatedOrder = await Order.findById(savedOrder._id)
+        .populate("paymentMethod", "name") // Assuming `name` field exists
+        .populate("deliveryMethod", "name");
+
       const responseItems = await Promise.all(
         orderItems.map(async (item) => {
           const product = await Product.findById(item.productId);
@@ -184,8 +190,8 @@ class OrderService {
         orderId: savedOrder._id,
         orderDate: savedOrder.createdAt,
         totalPrice: savedOrder.totalPrice,
-        paymentMethod: savedOrder.paymentMethod,
-        deliveryMethod: savedOrder.deliveryMethod,
+        paymentMethod: populatedOrder.paymentMethod.name,
+        deliveryMethod: populatedOrder.deliveryMethod.name,
         shippingCost: savedOrder.shippingCost,
         deliveryStatus: savedOrder.deliveryStatus,
         paymentStatus: savedOrder.paymentStatus,
@@ -193,7 +199,7 @@ class OrderService {
         items: responseItems,
       };
     } catch (error) {
-      throw new Error("Failed to create order");
+      throw new Error(error + "Failed to create order");
     }
   }
 
@@ -307,6 +313,51 @@ class OrderService {
         });
 
       // Định dạng kết quả để tránh lặp dữ liệu
+      // const formattedOrders = orders.map((order) => ({
+      //   id: order._id,
+      //   orderDate: order.createdAt,
+      //   customer: {
+      //     name: order.userId.name,
+      //     avatar: order.userId.avatar,
+      //     phone: order.userId.phone,
+      //     email: order.userId.email,
+      //   },
+      //   totalPrice: order.totalPrice,
+      //   status: order.deliveryStatus,
+      //   paymentMethod: order.paymentMethod ? order.paymentMethod.name : null, // Access `name` if `paymentMethod` is populated
+      //   deliveryMethod: order.deliveryMethod ? order.deliveryMethod.name : null, // Access `name` if `deliveryMethod` is populated
+      //   paymentStatus: order.paymentStatus,
+      //   products: order.items.map((item) => {
+      //     const product = item.productId
+      //       ? {
+      //           id: item.productId._id,
+      //           name: item.productId.name,
+      //           description: item.productId.description,
+      //           SKU: item.productId.SKU.map((sku) => ({
+      //             name: sku.name,
+      //             classifications: sku.classifications.map(
+      //               (classification) => classification
+      //             ),
+      //             _id: sku._id,
+      //           })),
+      //           price: item.productId.price,
+      //           salePercent: item.productId.salePercent,
+      //           priceAfterSale: item.productId.priceAfterSale,
+      //           category: item.productId.category.map((cat) => ({
+      //             id: cat._id,
+      //             name: cat.name,
+      //           })),
+      //           thumbnail: item.productId.thumbnail, // Lấy ảnh đầu tiên hoặc điều chỉnh theo yêu cầu
+      //         }
+      //       : null;
+
+      //     return {
+      //       product,
+      //       quantity: item.quantity,
+      //       SKU: item.SKU,
+      //     };
+      //   }),
+      // }));
       const formattedOrders = orders.map((order) => ({
         id: order._id,
         orderDate: order.createdAt,
@@ -318,39 +369,35 @@ class OrderService {
         },
         totalPrice: order.totalPrice,
         status: order.deliveryStatus,
-        paymentMethod: order.paymentMethod ? order.paymentMethod.name : null, // Access `name` if `paymentMethod` is populated
-        deliveryMethod: order.deliveryMethod ? order.deliveryMethod.name : null, // Access `name` if `deliveryMethod` is populated
+        paymentMethod: order.paymentMethod ? order.paymentMethod.name : null,
+        deliveryMethod: order.deliveryMethod ? order.deliveryMethod.name : null,
         paymentStatus: order.paymentStatus,
-        products: order.items.map((item) => {
-          const product = item.productId
-            ? {
-                id: item.productId._id,
-                name: item.productId.name,
-                description: item.productId.description,
-                SKU: item.productId.SKU.map((sku) => ({
-                  name: sku.name,
-                  classifications: sku.classifications.map(
-                    (classification) => classification
-                  ),
-                  _id: sku._id,
-                })),
-                price: item.productId.price,
-                salePercent: item.productId.salePercent,
-                priceAfterSale: item.productId.priceAfterSale,
-                category: item.productId.category.map((cat) => ({
-                  id: cat._id,
-                  name: cat.name,
-                })),
-                thumbnail: item.productId.thumbnail, // Lấy ảnh đầu tiên hoặc điều chỉnh theo yêu cầu
-              }
-            : null;
-
-          return {
-            product,
-            quantity: item.quantity,
-            SKU: item.SKU,
-          };
-        }),
+        products: order.items.map((item) => ({
+          _id: item.productId ? item.productId._id : null,
+          mame: item.productId ? item.productId.name : null,
+          description: item.productId ? item.productId.description : null,
+          SKU: item.productId
+            ? item.productId.SKU.map((sku) => ({
+                name: sku.name,
+                classifications: sku.classifications.map(
+                  (classification) => classification
+                ),
+                _id: sku._id,
+              }))
+            : null,
+          price: item.productId ? item.productId.price : null,
+          salePercent: item.productId ? item.productId.salePercent : null,
+          priceAfterSale: item.productId ? item.productId.priceAfterSale : null,
+          category: item.productId
+            ? item.productId.category.map((cat) => ({
+                id: cat._id,
+                name: cat.name,
+              }))
+            : null,
+          thumbnail: item.productId ? item.productId.thumbnail : null,
+          quantity: item.quantity,
+          SKU: item.SKU,
+        })),
       }));
 
       return {
