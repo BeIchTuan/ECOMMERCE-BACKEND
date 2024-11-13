@@ -21,13 +21,8 @@ class OrderController {
 
   async createOrder(req, res) {
     try {
-      const {
-        items,
-        address,
-        paymentMethodId,
-        deliveryMethodId,
-        discountId,
-      } = req.body;
+      const { items, address, paymentMethodId, deliveryMethodId, discountId } =
+        req.body;
       const userId = req.id;
 
       const orderData = await OrderService.createOrder(
@@ -183,6 +178,22 @@ class OrderController {
         success: false,
         message: "Failed to fetch payment methods.",
       });
+    }
+  }
+
+  // Controller method to handle the request
+  async calculateShipping(req, res) {
+    const { shopAddress, destination, deliveryMethodId } = req.body;
+    try {
+      // Calculate the shipping cost
+      const shippingCost = OrderService.calculateShippingCost(
+        shopAddress,
+        destination,
+        deliveryMethodId
+      );
+      res.status(200).json({ status: "success", shippingFee: shippingCost });
+    } catch (error) {
+      res.status(400).json({ error: error.message });
     }
   }
 }

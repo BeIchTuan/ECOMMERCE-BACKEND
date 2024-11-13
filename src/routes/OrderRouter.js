@@ -7,6 +7,10 @@ const { authMiddleware } = require('../middlewares/authMiddleware');
 router.get("/orders/methods/delivery", OrderController.getDeliveryMethods);
 router.get("/orders/methods/payment", OrderController.getPaymentMethods);
 
+//get shipping fee
+router.get("/shippingFee", OrderController.calculateShipping);
+
+
 //Route for customer
 router.get("/orders", authMiddleware(['user']), OrderController.getOrders);
 router.post("/orders", authMiddleware(['user']), OrderController.createOrder);

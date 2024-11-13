@@ -4,8 +4,16 @@ const ProductService = require("../services/ProductService");
 class ProductController {
   // Tạo sản phẩm mới
   async createProduct(req, res) {
-    const { name, price, inStock, description, category, SKU, image, salePercent } =
-      req.body;
+    const {
+      name,
+      price,
+      inStock,
+      description,
+      category,
+      SKU,
+      image,
+      salePercent,
+    } = req.body;
 
     // Kiểm tra nếu các trường bắt buộc chưa được nhập
     if (!name || !price || !inStock || !SKU || !category) {
@@ -140,7 +148,18 @@ class ProductController {
   async searchProducts(req, res) {
     try {
       const userId = req.id || null;
-      const {name, categoryId, page = 1, itemsPerPage = 15 } = req.query;
+      const {
+        name,
+        minPrice,
+        maxPrice,
+        stars,
+        shopAddress,
+        discount,
+        filter,
+        categoryId,
+        page = 1,
+        itemsPerPage = 15,
+      } = req.query;
 
       const products = await ProductService.searchProducts({
         userId,
@@ -148,12 +167,18 @@ class ProductController {
         categoryId,
         page,
         itemsPerPage,
+        minPrice,
+        maxPrice,
+        stars,
+        shopAddress,
+        discount,
+        filter,
       });
 
       res.json({
         status: "success",
         products: products.products,
-        pagination: products.pagination
+        pagination: products.pagination,
       });
     } catch (error) {
       res.status(500).json({ status: "error", message: error.message });

@@ -104,12 +104,7 @@ class OrderService {
         });
       }
 
-      let shippingCost = 0;
-      if (deliveryMethodId === "672e2ca1bcb7d35fd0794be3") {
-        shippingCost = 60000; //express
-      } else if (deliveryMethodId === "672e2ca1bcb7d35fd0794be4") {
-        shippingCost = 30000; //economy
-      }
+      const shippingCost = this.calculateShippingCost(null, null, deliveryMethodId)
       totalPrice += shippingCost;
 
       let discountAmount = 0;
@@ -453,6 +448,25 @@ class OrderService {
         success: false,
       };
     }
+  }
+
+  calculateShippingCost(shopAddress, destination, deliveryMethodId) {
+    let shippingCost = 0;
+
+    switch (deliveryMethodId) {
+      case "672e2ca1bcb7d35fd0794be2":
+        shippingCost = 0; 
+        break;
+      case "672e2ca1bcb7d35fd0794be3":
+        shippingCost = 60000; 
+        break;
+      case "672e2ca1bcb7d35fd0794be4":
+        shippingCost = 30000; 
+        break;
+      default:
+        throw new Error("Invalid delivery method");
+    }
+    return shippingCost;
   }
 }
 
