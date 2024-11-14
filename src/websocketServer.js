@@ -12,28 +12,65 @@ class ChatService {
     this.wss.on("connection", (ws) => this.handleConnection(ws));
   }
 
-  handleConnection(ws) {
+  async handleConnection(ws) {
     console.log("A new client connected");
 
-    // Xử lý các tin nhắn từ client
-    ws.on("message", (data) => this.handleMessage(ws, data));
+    // Đăng ký sự kiện message và close cho WebSocket kết nối mới
+    ws.on("message", async (data) => {
+      const messageData = JSON.parse(data);
 
-    // Xử lý khi client đóng kết nối
+      // Kiểm tra loại tin nhắn
+      if (messageData.type === "register") {
+        const userId = messageData.userId;
+
+        // Lưu trữ client với userId
+        this.addClient(userId, ws);
+        console.log(`User registered with ID: ${userId}`);
+
+        // Sau khi đăng ký, kiểm tra các tin nhắn chưa được gửi
+        const unreadMessages = await Message.find({
+          recipientId: userId,
+          isDelivered: false,
+        });
+
+        unreadMessages.forEach(async (msg) => {
+          ws.send(
+            JSON.stringify({
+              type: "chatMessage",
+              conversationId: msg.conversationId,
+              sender: msg.sender,
+              content: msg.content,
+              timestamp: msg.timestamp,
+            })
+          );
+
+          // Cập nhật trạng thái tin nhắn là đã gửi
+          msg.isDelivered = true;
+          await msg.save();
+        });
+      } else {
+        // Xử lý các tin nhắn khác (ví dụ: tin nhắn chat)
+        this.handleMessage(ws, data);
+      }
+    });
+
     ws.on("close", () => {
       console.log("Client disconnected");
       this.removeClient(ws);
     });
   }
 
-  // Lưu trữ client vào đối tượng `clients`
   addClient(userId, ws) {
     this.clients[userId] = ws;
+    console.log(`User ${userId} connected`);
   }
-
-  // Xóa client khi ngắt kết nối
+  
   removeClient(ws) {
     Object.keys(this.clients).forEach((userId) => {
-      if (this.clients[userId] === ws) {
+      this.clients[userId] = this.clients[userId].filter(
+        (client) => client !== ws
+      );
+      if (this.clients[userId].length === 0) {
         delete this.clients[userId];
       }
     });
@@ -65,21 +102,15 @@ class ChatService {
         sender,
         content,
         timestamp: new Date(),
+        isDelivered: false,
       });
 
       await newMessage.save();
 
-      // Phản hồi thành công cho client gửi tin nhắn
-      ws.send(
-        JSON.stringify({
-          status: "success",
-          message: "Message sent successfully",
-        })
-      );
-
+      // Gửi tin nhắn cho người nhận nếu họ đang kết nối
       // Gửi tin nhắn cho người nhận nếu họ đang kết nối
       const recipientSocket = this.clients[recipientId];
-      if (recipientSocket) {
+      if (recipientSocket && typeof recipientSocket.send === "function") {
         recipientSocket.send(
           JSON.stringify({
             type: "chatMessage",
@@ -89,7 +120,19 @@ class ChatService {
             timestamp: new Date(),
           })
         );
+        newMessage.isDelivered = true; // Đã gửi thành công
+        await newMessage.save();
+      } else {
+        console.log(`Recipient with ID ${recipientId} is not connected`);
       }
+
+      // Phản hồi thành công cho client gửi tin nhắn
+      ws.send(
+        JSON.stringify({
+          status: "success",
+          message: "Message sent successfully",
+        })
+      );
     } catch (error) {
       console.log("Failed to save message:", error); // Log lỗi nếu có
       ws.send(

@@ -20,6 +20,10 @@ const messageSchema = new Schema({
   timestamp: {
     type: Date,
     default: Date.now,
+  },
+  isDelivered: {
+    type: Boolean,
+    default: false,
   }
 });
 
