@@ -6,11 +6,36 @@ class ConversationController {
     try {
       const { members } = req.body;
 
-      // Tạo cuộc hội thoại mới
-      const newConversation = new Conversation({ members });
+      // Kiểm tra xem members có đủ hai người dùng không
+      if (!Array.isArray(members) || members.length !== 2) {
+        return res.status(400).json({
+          status: "error",
+          message: "Conversation must have exactly two members",
+        });
+      }
+
+      // Sắp xếp members để đảm bảo thứ tự không ảnh hưởng đến việc tìm kiếm
+      const sortedMembers = members.sort();
+
+      // Kiểm tra xem cuộc hội thoại giữa hai người đã tồn tại chưa
+      const existingConversation = await Conversation.findOne({
+        members: sortedMembers,
+      });
+
+      if (existingConversation) {
+        // Nếu đã tồn tại, trả về conversationId hiện tại
+        return res.status(200).json({
+          status: "success",
+          conversationId: existingConversation._id,
+          message: "Conversation already exists",
+        });
+      }
+
+      // Tạo cuộc hội thoại mới nếu chưa tồn tại
+      const newConversation = new Conversation({ members: sortedMembers });
       await newConversation.save();
 
-      return res.status(200).json({
+      return res.status(201).json({
         status: "success",
         conversationId: newConversation._id,
         message: "Conversation created successfully",
@@ -29,11 +54,12 @@ class ConversationController {
       // Tìm tất cả các cuộc hội thoại mà user là thành viên
       const conversations = await Conversation.find({
         members: { $in: [userId] },
-      }).populate({
-        path: "members",
-        select: "name shopName avatar role", // Chỉ lấy name và avatar của các thành viên
       })
-      .lean();  // Sử dụng lean() để kết quả là plain JavaScript objects
+        .populate({
+          path: "members",
+          select: "name shopName avatar role", // Chỉ lấy name và avatar của các thành viên
+        })
+        .lean(); // Sử dụng lean() để kết quả là plain JavaScript objects
 
       // Lọc và lấy thông tin người nhận cho mỗi cuộc hội thoại
       const conversationsWithRecipientInfo = conversations.map(
@@ -46,7 +72,8 @@ class ConversationController {
           return {
             conversationId: conversation._id,
             recipientId: recipient._id,
-            recipientName: recipient.role === 'seller' ? recipient.shopName : recipient.name,
+            recipientName:
+              recipient.role === "seller" ? recipient.shopName : recipient.name,
             recipientAvatar: recipient.avatar,
             //lastMessage: conversation.lastMessage, // Thêm tin nhắn cuối cùng nếu có
           };
