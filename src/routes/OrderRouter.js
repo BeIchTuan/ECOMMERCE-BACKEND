@@ -8,7 +8,7 @@ router.get("/orders/methods/delivery", OrderController.getDeliveryMethods);
 router.get("/orders/methods/payment", OrderController.getPaymentMethods);
 
 //get shipping fee
-router.get("/shippingFee", OrderController.calculateShipping);
+router.post("/shippingFee", OrderController.calculateShipping);
 
 
 //Route for customer
