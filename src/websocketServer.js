@@ -60,18 +60,40 @@ class ChatService {
     });
   }
 
+  // addClient(userId, ws) {
+  //   this.clients[userId] = ws;
+  //   console.log(`User ${userId} connected`);
+  // }
+
+  // removeClient(ws) {
+  //   Object.keys(this.clients).forEach((userId) => {
+  //     this.clients[userId] = this.clients[userId].filter(
+  //       (client) => client !== ws
+  //     );
+  //     if (this.clients[userId].length === 0) {
+  //       delete this.clients[userId];
+  //     }
+  //   });
+  // }
+
   addClient(userId, ws) {
-    this.clients[userId] = ws;
-    console.log(`User ${userId} connected`);
+    if (!this.clients[userId]) {
+      this.clients[userId] = []; // Khởi tạo mảng nếu chưa tồn tại
+    }
+    this.clients[userId].push(ws); // Thêm WebSocket mới vào mảng
   }
-  
+
   removeClient(ws) {
     Object.keys(this.clients).forEach((userId) => {
-      this.clients[userId] = this.clients[userId].filter(
-        (client) => client !== ws
-      );
-      if (this.clients[userId].length === 0) {
-        delete this.clients[userId];
+      if (Array.isArray(this.clients[userId])) {
+        // Lọc bỏ WebSocket đã đóng
+        this.clients[userId] = this.clients[userId].filter(
+          (client) => client !== ws
+        );
+        // Nếu không còn kết nối nào, xóa userId khỏi đối tượng clients
+        if (this.clients[userId].length === 0) {
+          delete this.clients[userId];
+        }
       }
     });
   }
@@ -102,39 +124,40 @@ class ChatService {
         sender,
         content,
         timestamp: new Date(),
-        isDelivered: false,
+        isDelivered: !!(
+          this.clients[recipientId] && this.clients[recipientId].length > 0
+        ),
       });
 
       await newMessage.save();
 
-      // Gửi tin nhắn cho người nhận nếu họ đang kết nối
-      // Gửi tin nhắn cho người nhận nếu họ đang kết nối
-      const recipientSocket = this.clients[recipientId];
-      if (recipientSocket && typeof recipientSocket.send === "function") {
-        recipientSocket.send(
-          JSON.stringify({
-            type: "chatMessage",
-            conversationId,
-            sender,
-            content,
-            timestamp: new Date(),
-          })
-        );
-        newMessage.isDelivered = true; // Đã gửi thành công
-        await newMessage.save();
-      } else {
-        console.log(`Recipient with ID ${recipientId} is not connected`);
-      }
-
-      // Phản hồi thành công cho client gửi tin nhắn
+      // Phản hồi thành công cho người gửi
       ws.send(
         JSON.stringify({
           status: "success",
           message: "Message sent successfully",
         })
       );
+
+      // Gửi tin nhắn đến tất cả kết nối của người nhận
+      const recipientSockets = this.clients[recipientId];
+      if (recipientSockets && recipientSockets.length > 0) {
+        recipientSockets.forEach((socket) => {
+          socket.send(
+            JSON.stringify({
+              type: "chatMessage",
+              conversationId,
+              sender,
+              content,
+              timestamp: new Date(),
+            })
+          );
+        });
+      } else {
+        console.log(`Recipient with ID ${recipientId} is not connected`);
+      }
     } catch (error) {
-      console.log("Failed to save message:", error); // Log lỗi nếu có
+      console.error("Failed to save message:", error);
       ws.send(
         JSON.stringify({
           status: "error",
@@ -142,6 +165,39 @@ class ChatService {
         })
       );
     }
+    //   const recipientSocket = this.clients[recipientId];
+    //   if (recipientSocket && typeof recipientSocket.send === "function") {
+    //     recipientSocket.send(
+    //       JSON.stringify({
+    //         type: "chatMessage",
+    //         conversationId,
+    //         sender,
+    //         content,
+    //         timestamp: new Date(),
+    //       })
+    //     );
+    //     newMessage.isDelivered = true; // Đã gửi thành công
+    //     await newMessage.save();
+    //   } else {
+    //     console.log(`Recipient with ID ${recipientId} is not connected`);
+    //   }
+
+    //   // Phản hồi thành công cho client gửi tin nhắn
+    //   ws.send(
+    //     JSON.stringify({
+    //       status: "success",
+    //       message: "Message sent successfully",
+    //     })
+    //   );
+    // } catch (error) {
+    //   console.log("Failed to save message:", error); // Log lỗi nếu có
+    //   ws.send(
+    //     JSON.stringify({
+    //       status: "error",
+    //       message: "Failed to send message",
+    //     })
+    //   );
+    // }
   }
 
   async handleGetHistory(ws, requestData) {
