@@ -90,6 +90,11 @@ class OrderService {
 
         if (!product) throw new Error("Product not found");
 
+        // Kiểm tra tồn kho
+        if (product.inStock < item.quantity) {
+          throw new Error(`Not enough stock for product: ${product.name}`);
+        }
+
         const price = product.priceAfterSale;
         //let finalPrice = price;
         const itemTotal = price * item.quantity;
@@ -102,9 +107,16 @@ class OrderService {
           price: price,
           sellerId: product.seller,
         });
+
+        product.inStock -= item.quantity;
+        await product.save();
       }
 
-      const shippingCost = this.calculateShippingCost(null, null, deliveryMethodId)
+      const shippingCost = this.calculateShippingCost(
+        null,
+        null,
+        deliveryMethodId
+      );
       totalPrice += shippingCost;
 
       let discountAmount = 0;
@@ -455,13 +467,13 @@ class OrderService {
 
     switch (deliveryMethodId) {
       case "672e2ca1bcb7d35fd0794be2":
-        shippingCost = 0; 
+        shippingCost = 0;
         break;
       case "672e2ca1bcb7d35fd0794be3":
-        shippingCost = 60000; 
+        shippingCost = 60000;
         break;
       case "672e2ca1bcb7d35fd0794be4":
-        shippingCost = 30000; 
+        shippingCost = 30000;
         break;
       default:
         throw new Error("Invalid delivery method");
