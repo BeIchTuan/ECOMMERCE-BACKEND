@@ -348,8 +348,8 @@ const getFavoriteProducts = (userId) => {
         isFavorite: true,
         shopInfor: product.seller
           ? {
-              id: product.seller._id.toString(),
-              name: product.seller.shopName,
+              shopId: product.seller._id.toString(),
+              shopName: product.seller.shopName,
             }
           : null,
         category: product.category.map((cat) => ({
