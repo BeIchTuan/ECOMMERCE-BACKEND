@@ -333,6 +333,7 @@ class OrderService {
         paymentMethod: order.paymentMethod ? order.paymentMethod.name : null,
         deliveryMethod: order.deliveryMethod ? order.deliveryMethod.name : null,
         paymentStatus: order.paymentStatus,
+        shippingCost: order.shippingCost,
         products: order.items.map((item) => ({
           _id: item.productId ? item.productId._id : null,
           name: item.productId ? item.productId.name : null,
