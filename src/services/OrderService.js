@@ -319,52 +319,6 @@ class OrderService {
           ],
         });
 
-      // Định dạng kết quả để tránh lặp dữ liệu
-      // const formattedOrders = orders.map((order) => ({
-      //   id: order._id,
-      //   orderDate: order.createdAt,
-      //   customer: {
-      //     name: order.userId.name,
-      //     avatar: order.userId.avatar,
-      //     phone: order.userId.phone,
-      //     email: order.userId.email,
-      //   },
-      //   totalPrice: order.totalPrice,
-      //   status: order.deliveryStatus,
-      //   paymentMethod: order.paymentMethod ? order.paymentMethod.name : null, // Access `name` if `paymentMethod` is populated
-      //   deliveryMethod: order.deliveryMethod ? order.deliveryMethod.name : null, // Access `name` if `deliveryMethod` is populated
-      //   paymentStatus: order.paymentStatus,
-      //   products: order.items.map((item) => {
-      //     const product = item.productId
-      //       ? {
-      //           id: item.productId._id,
-      //           name: item.productId.name,
-      //           description: item.productId.description,
-      //           SKU: item.productId.SKU.map((sku) => ({
-      //             name: sku.name,
-      //             classifications: sku.classifications.map(
-      //               (classification) => classification
-      //             ),
-      //             _id: sku._id,
-      //           })),
-      //           price: item.productId.price,
-      //           salePercent: item.productId.salePercent,
-      //           priceAfterSale: item.productId.priceAfterSale,
-      //           category: item.productId.category.map((cat) => ({
-      //             id: cat._id,
-      //             name: cat.name,
-      //           })),
-      //           thumbnail: item.productId.thumbnail, // Lấy ảnh đầu tiên hoặc điều chỉnh theo yêu cầu
-      //         }
-      //       : null;
-
-      //     return {
-      //       product,
-      //       quantity: item.quantity,
-      //       SKU: item.SKU,
-      //     };
-      //   }),
-      // }));
       const formattedOrders = orders.map((order) => ({
         id: order._id,
         orderDate: order.createdAt,
@@ -381,7 +335,7 @@ class OrderService {
         paymentStatus: order.paymentStatus,
         products: order.items.map((item) => ({
           _id: item.productId ? item.productId._id : null,
-          mame: item.productId ? item.productId.name : null,
+          name: item.productId ? item.productId.name : null,
           description: item.productId ? item.productId.description : null,
           SKU: item.productId
             ? item.productId.SKU.map((sku) => ({

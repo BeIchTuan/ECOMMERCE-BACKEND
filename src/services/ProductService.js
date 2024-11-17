@@ -7,7 +7,6 @@ class ProductService {
   // Tạo sản phẩm mới
   async createProduct(data, sellerId) {
     try {
-
       const newProduct = new Product({
         ...data,
         seller: sellerId,
@@ -230,7 +229,19 @@ class ProductService {
     }
   }
 
-  async searchProducts({userId, name, categoryId, page = 1, itemsPerPage = 15 }) {
+  async searchProducts({
+    userId,
+    name,
+    minPrice,
+    maxPrice,
+    stars,
+    //shopAddress,
+    discount,
+    filter,
+    categoryId,
+    page = 1,
+    itemsPerPage = 15,
+  }) {
     try {
       const query = {};
 
@@ -244,6 +255,39 @@ class ProductService {
         query.category = categoryId;
       }
 
+      // Lọc theo khoảng giá
+      if (minPrice || maxPrice) {
+        query.priceAfterSale = {};
+        if (minPrice) query.priceAfterSale.$gte = Number(minPrice);
+        if (maxPrice) query.priceAfterSale.$lte = Number(maxPrice);
+      }
+
+      // Lọc theo đánh giá sao
+      if (stars) {
+        const starsArray = stars.split(",").map(Number);
+        query.averageStar = { $in: starsArray };
+      }
+
+      // Lọc theo nơi bán (shopAddress)
+      //   if (shopAddress) {
+      //     query.location = { $regex: shopAddress, $options: "i" };
+      // }
+
+      // Lọc sản phẩm có giảm giá
+      if (discount === "true") {
+        query.salePercent = { $gt: 0 };
+      }
+
+      // Xây dựng sắp xếp
+      const sortOptions = {
+        "price-asc": { priceAfterSale: 1 },
+        "price-desc": { priceAfterSale: -1 },
+        newest: { createdAt: -1 },
+        oldest: { createdAt: 1 },
+        "best-seller": { sold: -1 },
+      };
+      const sort = sortOptions[filter] || {};
+
       // Tính toán skip và limit
       const skip = (page - 1) * itemsPerPage;
 
@@ -251,6 +295,7 @@ class ProductService {
       const products = await Product.find(query)
         .skip(skip)
         .limit(itemsPerPage)
+        .sort(sort)
         .populate("seller", "shopName"); // .populate('product', 'name'); // Populate with product name
 
       const user = await User.findById(userId).select("favoriteProducts");

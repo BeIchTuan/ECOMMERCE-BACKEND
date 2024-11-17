@@ -153,7 +153,7 @@ class ProductController {
         minPrice,
         maxPrice,
         stars,
-        shopAddress,
+        //shopAddress,
         discount,
         filter,
         categoryId,
@@ -170,7 +170,7 @@ class ProductController {
         minPrice,
         maxPrice,
         stars,
-        shopAddress,
+        //shopAddress,
         discount,
         filter,
       });
