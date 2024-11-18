@@ -1,5 +1,6 @@
 const { json } = require("body-parser");
 const ProductService = require("../services/ProductService");
+const cloudinary = require("../config/cloudinary")
 
 class ProductController {
   // Tạo sản phẩm mới
@@ -16,7 +17,7 @@ class ProductController {
     } = req.body;
 
     // Kiểm tra nếu các trường bắt buộc chưa được nhập
-    if (!name || !price || !inStock || !SKU || !category) {
+    if (!name || !price || !inStock || !category) {
       return res.status(400).json({
         status: "error",
         message: "Name, price, inStock, SKU, and category are required fields!",
@@ -25,8 +26,20 @@ class ProductController {
 
     try {
       const sellerId = req.id; // Lấy sellerId từ token đã xác thực
+      // const product = await ProductService.createProduct(req.body, sellerId);
+      const imageUrls = [];
 
-      const product = await ProductService.createProduct(req.body, sellerId);
+      // Tải từng ảnh lên Cloudinary
+      for (const file of req.files) {
+        const result = await uploadToCloudinary(file);
+        imageUrls.push(result.secure_url); // Lấy URL ảnh từ Cloudinary
+      }
+
+      // Lưu sản phẩm với URL ảnh
+      const product = await ProductService.createProduct(
+        { ...req.body, image: imageUrls },
+        sellerId
+      );
       return res.status(201).json({
         status: "success",
         message: "Product added successfully",
@@ -145,6 +158,7 @@ class ProductController {
     }
   }
 
+  //Tìm sản phẩm
   async searchProducts(req, res) {
     try {
       const userId = req.id || null;
@@ -184,6 +198,20 @@ class ProductController {
       res.status(500).json({ status: "error", message: error.message });
     }
   }
+}
+
+async function uploadToCloudinary(file) {
+  return new Promise((resolve, reject) => {
+    cloudinary.uploader
+      .upload_stream(
+        { folder: "products" }, // Thư mục lưu ảnh trong Cloudinary
+        (error, result) => {
+          if (error) return reject(error);
+          resolve(result);
+        }
+      )
+      .end(file.buffer);
+  });
 }
 
 module.exports = new ProductController();
