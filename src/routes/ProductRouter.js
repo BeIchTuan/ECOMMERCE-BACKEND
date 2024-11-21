@@ -17,6 +17,7 @@ router.post(
 router.put(
   "/seller/products/:id",
   authMiddleware(["seller"]),
+  upload.array("files", 10),
   productController.updateProduct
 );
 //Delete products

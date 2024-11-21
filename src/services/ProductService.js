@@ -2,6 +2,7 @@ const Product = require("../models/ProductModel");
 const User = require("../models/UserModel");
 const Discount = require("../models/DiscountModel");
 const Rate = require("../models/RateModel");
+const { deleteFromCloudinary, extractPublicId } = require("../utils/uploadImage");
 
 class ProductService {
   // Tạo sản phẩm mới
@@ -96,7 +97,7 @@ class ProductService {
   }
 
   // Cập nhật sản phẩm
-  async updateProduct(productId, sellerId, data) {
+  async updateProduct(productId, sellerId, data, newImages, imagesToDelete) {
     try {
       const product = await Product.findById(productId);
       if (!product) {
@@ -105,6 +106,48 @@ class ProductService {
 
       if (product.seller.toString() !== sellerId) {
         throw new Error("You are not authorized to update this product");
+      }
+
+      console.log(imagesToDelete)
+
+      if (imagesToDelete && imagesToDelete.length > 0) {
+        if (typeof imagesToDelete === "string") {
+          imagesToDelete = JSON.parse(imagesToDelete);
+        }
+  
+        for (const image of imagesToDelete) {
+          if (typeof image === "string") {
+            const publicId = extractPublicId(image);
+            console.log("Extracted Public ID:", publicId);
+  
+            await deleteFromCloudinary(publicId);
+  
+            const index = product.image.indexOf(image);
+            if (index > -1) product.image.splice(index, 1);
+          } else {
+            console.error("Invalid image URL:", image);
+          }
+        }
+      }
+  
+      // Xóa ảnh cũ nếu có yêu cầu
+      // if (imagesToDelete && imagesToDelete.length > 0) {
+      //   for (const image of imagesToDelete) {
+      //     // Lấy `public_id` từ URL ảnh để xóa khỏi Cloudinary
+      //     // const publicId = image.split("/").pop().split(".")[0]; // Trích xuất `public_id` từ URL
+      //     const publicId = extractPublicId(image);
+      //     console.log(publicId)
+      //     // const publicId = extractPublicId(image);
+      //     await deleteFromCloudinary(publicId);
+      //     // Loại ảnh khỏi danh sách ảnh của sản phẩm
+      //     const index = product.image.indexOf(image);
+      //     if (index > -1) product.image.splice(index, 1);
+      //   }
+      // }
+
+      // Thêm ảnh mới vào danh sách ảnh
+      if (newImages && newImages.length > 0) {
+        product.image.push(...newImages);
       }
 
       Object.assign(product, data);

@@ -1,6 +1,10 @@
 const { json } = require("body-parser");
 const ProductService = require("../services/ProductService");
-const cloudinary = require("../config/cloudinary")
+const cloudinary = require("../config/cloudinary");
+const {
+  uploadToCloudinary,
+  deleteFromCloudinary,
+} = require("../utils/uploadImage");
 
 class ProductController {
   // Tạo sản phẩm mới
@@ -31,13 +35,23 @@ class ProductController {
 
       // Tải từng ảnh lên Cloudinary
       for (const file of req.files) {
-        const result = await uploadToCloudinary(file);
+        const result = await uploadToCloudinary(file, "products");
         imageUrls.push(result.secure_url); // Lấy URL ảnh từ Cloudinary
+      }
+
+      let parsedSKU;
+      try {
+        parsedSKU = JSON.parse(SKU);
+      } catch (error) {
+        return res.status(400).json({
+          status: "error",
+          message: "SKU must be a valid JSON string!",
+        });
       }
 
       // Lưu sản phẩm với URL ảnh
       const product = await ProductService.createProduct(
-        { ...req.body, image: imageUrls },
+        { ...req.body, SKU: parsedSKU, image: imageUrls },
         sellerId
       );
       return res.status(201).json({
@@ -58,15 +72,31 @@ class ProductController {
       const sellerId = req.id; // Lấy sellerId từ token đã xác thực
       const productId = req.params.id;
 
-      const product = await ProductService.updateProduct(
+      const productData = req.body; // Lấy thông tin sản phẩm từ body
+      let newImageUrls = [];
+      let imagesToDelete = req.body.imagesToDelete || []; // Danh sách ảnh cần xóa (nếu có)
+
+      // Kiểm tra nếu có file tải lên
+      if (req.files && req.files.length > 0) {
+        for (const file of req.files) {
+          const result = await uploadToCloudinary(file, "products"); // Tải lên Cloudinary
+          newImageUrls.push(result.secure_url); // Lưu URL của ảnh mới
+        }
+      }
+
+      // Gửi yêu cầu cập nhật sản phẩm
+      const updatedProduct = await ProductService.updateProduct(
         productId,
         sellerId,
-        req.body
+        productData,
+        newImageUrls,
+        imagesToDelete
       );
+
       return res.status(200).json({
         status: "success",
         message: "Product updated successfully",
-        product: product,
+        product: updatedProduct,
       });
     } catch (error) {
       return res.status(400).json({
@@ -198,20 +228,6 @@ class ProductController {
       res.status(500).json({ status: "error", message: error.message });
     }
   }
-}
-
-async function uploadToCloudinary(file) {
-  return new Promise((resolve, reject) => {
-    cloudinary.uploader
-      .upload_stream(
-        { folder: "products" }, // Thư mục lưu ảnh trong Cloudinary
-        (error, result) => {
-          if (error) return reject(error);
-          resolve(result);
-        }
-      )
-      .end(file.buffer);
-  });
 }
 
 module.exports = new ProductController();
