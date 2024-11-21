@@ -2,6 +2,8 @@ const { json } = require("body-parser");
 const jwt = require("jsonwebtoken");
 const UserService = require("../services/UserService");
 const User = require("../models/UserModel");
+const cloudinary = require("../config/cloudinary")
+const { uploadToCloudinary } = require("../utils/uploadImage");
 
 const createUser = async (req, res) => {
   try {
@@ -140,6 +142,12 @@ const updateUser = async (req, res) => {
         status: "error",
         message: "Invalid role",
       });
+    }
+
+    // Nếu có file ảnh được gửi, tải lên Cloudinary
+    if (req.file) {
+      const uploadResult = await uploadToCloudinary(req.file, "avatar");
+      fieldsToUpdate.avatar = uploadResult.secure_url; // Lưu URL của ảnh vào avatar
     }
 
     const response = await UserService.updateUser(userId, fieldsToUpdate);

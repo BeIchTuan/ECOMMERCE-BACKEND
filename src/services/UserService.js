@@ -1,9 +1,9 @@
 const User = require("../models/UserModel");
 const Order = require("../models/OrderModel");
-
 const bcrypt = require("bcrypt"); // For password hashing
 const { generalAccessToken, generalRefreshToken } = require("./Jwtservice");
 const mongoose = require("mongoose");
+const { deleteFromCloudinary } = require("../utils/uploadImage");
 
 const createUser = (newUser) => {
   return new Promise(async (resolve, reject) => {
@@ -143,32 +143,15 @@ const loginUser = (userLogin) => {
 const updateUser = (id, data) => {
   return new Promise(async (resolve, reject) => {
     try {
-      //   const checkUser = await User.findOne({
-      //     _id: id,
-      //   });
-
-      //   if (checkUser === null) {
-      //     resolve({
-      //       status: "error",
-      //       message: "The user is not defined",
-      //     });
-      //   }
-
-      //   const updatedUser = await User.findByIdAndUpdate(id, data, { new: true });
-
-      //   console.log('update user: ', updatedUser)
-
-      //   resolve({
-      //     status: "success",
-      //     message: "Updated",
-      //     data: updatedUser,
-      //   });
-      // } catch (e) {
-      //   reject(e);
-      // }
       const user = await User.findById(id);
       if (!user) {
         throw new Error("User not found");
+      }
+
+      // Nếu có avatar mới, xóa avatar cũ trên Cloudinary
+      if (data.avatar && user.avatar) {
+        const publicId = user.avatar.split("/").slice(-2).join("/").split(".")[0]; // Lấy publicId từ URL
+        await deleteFromCloudinary(publicId); // Xóa ảnh cũ
       }
 
       // Cập nhật các trường hợp lệ đã được lọc trong controller
