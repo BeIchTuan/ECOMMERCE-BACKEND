@@ -138,12 +138,20 @@ class ProductService {
 
       // Xử lý cập nhật SKU
       if ("SKU" in data) {
-        try {
-          product.SKU = data.SKU ? JSON.parse(data.SKU) : [];
-        } catch (err) {
-          throw new Error(
-            "SKU must be a valid JSON string representing an array of objects."
-          );
+        if (data.SKU === undefined || data.SKU === null || data.SKU === "") {
+          product.SKU = [];
+        } else {
+          try {
+            product.SKU =
+              typeof data.SKU === "string" ? JSON.parse(data.SKU) : data.SKU;
+            if (!Array.isArray(product.SKU)) {
+              throw new Error("SKU must be an array of objects.");
+            }
+          } catch (err) {
+            throw new Error(
+              "SKU must be a valid JSON string representing an array of objects."
+            );
+          }
         }
       }
 
