@@ -111,8 +111,6 @@ class ProductService {
         throw new Error("You are not authorized to update this product");
       }
 
-      console.log(imagesToDelete);
-
       if (imagesToDelete && imagesToDelete.length > 0) {
         if (typeof imagesToDelete === "string") {
           imagesToDelete = JSON.parse(imagesToDelete);
@@ -136,6 +134,17 @@ class ProductService {
       // Thêm ảnh mới vào danh sách ảnh
       if (newImages && newImages.length > 0) {
         product.image.push(...newImages);
+      }
+
+      // Xử lý cập nhật SKU
+      if ("SKU" in data) {
+        try {
+          product.SKU = data.SKU ? JSON.parse(data.SKU) : [];
+        } catch (err) {
+          throw new Error(
+            "SKU must be a valid JSON string representing an array of objects."
+          );
+        }
       }
 
       Object.assign(product, data);
