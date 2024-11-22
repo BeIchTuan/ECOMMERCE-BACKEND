@@ -24,7 +24,7 @@ class ProductController {
     if (!name || !price || !inStock || !category) {
       return res.status(400).json({
         status: "error",
-        message: "Name, price, inStock, SKU, and category are required fields!",
+        message: "Name, price, inStock, and category are required fields!",
       });
     }
 
@@ -39,14 +39,16 @@ class ProductController {
         imageUrls.push(result.secure_url); // Lấy URL ảnh từ Cloudinary
       }
 
-      let parsedSKU;
-      try {
-        parsedSKU = JSON.parse(SKU);
-      } catch (error) {
-        return res.status(400).json({
-          status: "error",
-          message: "SKU must be a valid JSON string!",
-        });
+      let parsedSKU = [];
+      if (SKU) {
+        try {
+          parsedSKU = JSON.parse(SKU);
+        } catch (error) {
+          return res.status(400).json({
+            status: "error",
+            message: "SKU must be a valid JSON string!",
+          });
+        }
       }
 
       // Lưu sản phẩm với URL ảnh
