@@ -150,8 +150,23 @@ const updateUser = (id, data) => {
 
       // Nếu có avatar mới, xóa avatar cũ trên Cloudinary
       if (data.avatar && user.avatar) {
-        const publicId = user.avatar.split("/").slice(-2).join("/").split(".")[0]; // Lấy publicId từ URL
+        const publicId = user.avatar
+          .split("/")
+          .slice(-2)
+          .join("/")
+          .split(".")[0]; // Lấy publicId từ URL
         await deleteFromCloudinary(publicId); // Xóa ảnh cũ
+      }
+
+      if (data.address) {
+        try {
+          data.address = JSON.parse(data.address); // Parse JSON thành mảng đối tượng
+        } catch (err) {
+          return res.status(400).json({
+            status: "error",
+            message: "Invalid address format. Ensure it's a valid JSON string.",
+          });
+        }
       }
 
       // Cập nhật các trường hợp lệ đã được lọc trong controller
@@ -239,11 +254,11 @@ const getCustomerInfor = (userId) => {
   return new Promise(async (resolve, reject) => {
     try {
       const user = await User.findById(userId).select("name email phone"); // Select only necessary fields
-      
+
       if (!user) {
         return resolve({ success: false, message: "User not found" });
       }
-      
+
       resolve({ success: true, user });
     } catch (error) {
       reject(error); // Reject with the error message
@@ -259,7 +274,7 @@ const getCustomerOrderHistory = (userId) => {
         .sort({ createdAt: -1 }); // Sort by date in descending order
 
       // Format the orders for the response
-      const orderHistory = orders.map(order => ({
+      const orderHistory = orders.map((order) => ({
         orderId: order._id,
         orderDate: order.createdAt,
         totalPrice: order.totalPrice,
