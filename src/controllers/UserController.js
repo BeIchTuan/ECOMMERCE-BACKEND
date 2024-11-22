@@ -135,8 +135,8 @@ const updateUser = async (req, res) => {
       fieldsToUpdate = { name, avatar, birthday, gender, phone, address };
     } else if (user.role === "seller") {
       // Chỉ cho phép cập nhật các trường này cho người dùng có role là "seller"
-      const { shopName, shopDescription, shopAddress } = data;
-      fieldsToUpdate = { shopName, shopDescription, shopAddress };
+      const { shopName, shopDescription, address } = data;
+      fieldsToUpdate = { shopName, shopDescription, address };
     } else {
       return res.status(400).json({
         status: "error",

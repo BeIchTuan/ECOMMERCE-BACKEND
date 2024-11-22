@@ -162,10 +162,10 @@ const updateUser = (id, data) => {
         try {
           data.address = JSON.parse(data.address); // Parse JSON thành mảng đối tượng
         } catch (err) {
-          return res.status(400).json({
+          return {
             status: "error",
             message: "Invalid address format. Ensure it's a valid JSON string.",
-          });
+          };
         }
       }
 
