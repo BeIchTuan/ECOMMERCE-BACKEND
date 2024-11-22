@@ -123,7 +123,6 @@ class OrderService {
       let discount;
 
       // Kiểm tra và áp dụng mã giảm giá nếu có
-      // Kiểm tra và áp dụng mã giảm giá nếu có
       if (discountId) {
         discount = await Discount.findById(discountId);
 
@@ -206,7 +205,10 @@ class OrderService {
         items: responseItems,
       };
     } catch (error) {
-      throw new Error(error + "Failed to create order");
+      return {
+        status: 500,
+        message: error.message || "An error occurred while creating the order",
+      };
     }
   }
 
