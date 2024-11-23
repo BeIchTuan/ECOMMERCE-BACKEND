@@ -2,7 +2,7 @@ const { json } = require("body-parser");
 const jwt = require("jsonwebtoken");
 const UserService = require("../services/UserService");
 const User = require("../models/UserModel");
-const cloudinary = require("../config/cloudinary")
+const cloudinary = require("../config/cloudinary");
 const { uploadToCloudinary } = require("../utils/uploadImage");
 
 const createUser = async (req, res) => {
@@ -209,7 +209,7 @@ const getUser = async (req, res) => {
 const getCustomerInfor = async (req, res) => {
   try {
     const customerId = req.params.customerId; // Assuming the user ID is passed in the URL
-    console.log(customerId)
+    console.log(customerId);
     const result = await UserService.getCustomerInfor(customerId);
 
     if (!result.success) {
@@ -232,13 +232,11 @@ const getCustomerInfor = async (req, res) => {
 
     return res.status(200).json(response);
   } catch (error) {
-    return res
-      .status(500)
-      .json({
-        status: "error",
-        message: "Failed to fetch customer contact",
-        message: error.message,
-      });
+    return res.status(500).json({
+      status: "error",
+      message: "Failed to fetch customer contact",
+      message: error.message,
+    });
   }
 };
 
@@ -299,7 +297,10 @@ const deleteFavoriteProduct = (req, res) => {
 const getFavoriteProducts = (req, res) => {
   const userId = req.id;
 
-  UserService.getFavoriteProducts(userId)
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 15;
+
+  UserService.getFavoriteProducts(page, limit, userId)
     .then((favoriteProducts) => {
       res.json({
         status: "success",
@@ -325,5 +326,5 @@ module.exports = {
   deleteFavoriteProduct,
   getFavoriteProducts,
   getCustomerInfor,
-  getOrderCustomerHistory
+  getOrderCustomerHistory,
 };

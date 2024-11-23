@@ -324,7 +324,55 @@ const deleteFavoriteProduct = (userId, productId) => {
     .catch((error) => Promise.reject(error.message));
 };
 
-const getFavoriteProducts = (userId) => {
+// const getFavoriteProducts = (page = 1, itemsPerPage = 15, userId) => {
+//   const skip = (page - 1) * itemsPerPage;
+
+//   return User.findById(userId)
+//     .skip(skip)
+//     .limit(itemsPerPage)
+//     .populate({
+//       path: "favoriteProducts",
+//       populate: [
+//         { path: "category", select: "id name" },
+//         { path: "seller", select: "id shopName" },
+//       ],
+//     })
+//     .then((user) => {
+//       if (!user) return Promise.reject("User not found");
+
+//       const formattedFavorites = user.favoriteProducts.map((product) => ({
+//         id: product._id.toString(),
+//         name: product.name,
+//         description: product.description,
+//         price: product.price,
+//         salePercent: product.salePercent || 0,
+//         priceAfterSale: product.priceAfterSale || product.price,
+//         isFavorite: true,
+//         shopInfor: product.seller
+//           ? {
+//               shopId: product.seller._id.toString(),
+//               shopName: product.seller.shopName,
+//             }
+//           : null,
+//         category: product.category.map((cat) => ({
+//           id: cat._id.toString(),
+//           name: cat.name,
+//         })),
+//         discount: product.discount ? product.discount._id.toString() : null,
+//         rates: {
+//           star: product.rate || 0,
+//         },
+//         image: product.thumbnail || "",
+//       }));
+
+//       return Promise.resolve(formattedFavorites);
+//     })
+//     .catch((error) => Promise.reject(error.message));
+// };
+
+const getFavoriteProducts = (page = 1, itemsPerPage = 15, userId) => {
+  const skip = (page - 1) * itemsPerPage;
+
   return User.findById(userId)
     .populate({
       path: "favoriteProducts",
@@ -336,32 +384,47 @@ const getFavoriteProducts = (userId) => {
     .then((user) => {
       if (!user) return Promise.reject("User not found");
 
-      const formattedFavorites = user.favoriteProducts.map((product) => ({
-        id: product._id.toString(),
-        name: product.name,
-        description: product.description,
-        price: product.price,
-        salePercent: product.salePercent || 0,
-        priceAfterSale: product.priceAfterSale || product.price,
-        isFavorite: true,
-        shopInfor: product.seller
-          ? {
-              shopId: product.seller._id.toString(),
-              shopName: product.seller.shopName,
-            }
-          : null,
-        category: product.category.map((cat) => ({
-          id: cat._id.toString(),
-          name: cat.name,
-        })),
-        discount: product.discount ? product.discount._id.toString() : null,
-        rates: {
-          star: product.rate || 0,
-        },
-        image: product.thumbnail || "",
-      }));
+      const totalItems = user.favoriteProducts.length; // Tổng số sản phẩm yêu thích
+      const totalPages = Math.ceil(totalItems / itemsPerPage); // Tổng số trang
 
-      return Promise.resolve(formattedFavorites);
+      // Phân trang chỉ lấy sản phẩm trong phạm vi hiện tại
+      const paginatedFavorites = user.favoriteProducts
+        .slice(skip, skip + itemsPerPage)
+        .map((product) => ({
+          id: product._id.toString(),
+          name: product.name,
+          description: product.description,
+          price: product.price,
+          salePercent: product.salePercent || 0,
+          priceAfterSale: product.priceAfterSale || product.price,
+          isFavorite: true,
+          shopInfor: product.seller
+            ? {
+                shopId: product.seller._id.toString(),
+                shopName: product.seller.shopName,
+              }
+            : null,
+          category: product.category.map((cat) => ({
+            id: cat._id.toString(),
+            name: cat.name,
+          })),
+          discount: product.discount ? product.discount._id.toString() : null,
+          rates: {
+            star: product.rate || 0,
+          },
+          image: product.thumbnail || "",
+        }));
+
+      // Trả về kết quả kèm thông tin phân trang
+      return Promise.resolve({
+        data: paginatedFavorites,
+        pagination: {
+          currentPage: page,
+          totalPages: totalPages,
+          itemsPerPage: itemsPerPage,
+          totalItems: totalItems,
+        },
+      });
     })
     .catch((error) => Promise.reject(error.message));
 };
