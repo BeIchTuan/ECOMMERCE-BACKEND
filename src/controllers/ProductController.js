@@ -86,11 +86,24 @@ class ProductController {
         }
       }
 
+      let parsedSKU = [];
+      if (productData.SKU) {
+        try {
+          parsedSKU = JSON.parse(productData.SKU);
+        } catch (error) {
+          return res.status(400).json({
+            status: "error",
+            message: "SKU must be a valid JSON string!",
+          });
+        }
+      }
+
       // Gửi yêu cầu cập nhật sản phẩm
       const updatedProduct = await ProductService.updateProduct(
         productId,
         sellerId,
-        productData,
+        {...productData,
+        SKU: parsedSKU},
         newImageUrls,
         imagesToDelete
       );

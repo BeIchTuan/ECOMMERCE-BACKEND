@@ -29,7 +29,7 @@ const productSchema = new Schema({
   rates: [{ type: Schema.Types.ObjectId, ref: "Rate" }],
   seller: { type: Schema.Types.ObjectId, ref: "User" },
   sold: { type: Number, default: 0 },
-
+  isDeleted: {type: Boolean, default: false},
   averageStar: { type: Number, default: 0 }, // Số sao trung bình
   rateCount: { type: Number, default: 0 }, // Số lượng đánh giá
 });
