@@ -266,12 +266,22 @@ const getCustomerInfor = (userId) => {
   });
 };
 
-const getCustomerOrderHistory = (userId) => {
+const getCustomerOrderHistory = (page = 1, itemsPerPage = 15, userId) => {
+  const skip = (page - 1) * itemsPerPage;
+
   return new Promise(async (resolve, reject) => {
     try {
+      // Đếm tổng số lượng đơn hàng của user
+      const totalItems = await Order.countDocuments({ userId });
+
+      // Truy vấn các đơn hàng với phân trang
       const orders = await Order.find({ userId })
+        .skip(skip)
+        .limit(itemsPerPage)
         .select("createdAt totalPrice")
         .sort({ createdAt: -1 }); // Sort by date in descending order
+
+      console.log(userId);
 
       // Format the orders for the response
       const orderHistory = orders.map((order) => ({
@@ -280,7 +290,19 @@ const getCustomerOrderHistory = (userId) => {
         totalPrice: order.totalPrice,
       }));
 
-      resolve({ status: "success", orderHistory });
+      // Tính toán tổng số trang
+      const totalPages = Math.ceil(totalItems / itemsPerPage);
+
+      resolve({
+        status: "success",
+        orderHistory,
+        pagination: {
+          currentPage: page,
+          totalPages,
+          itemsPerPage,
+          totalItems,
+        },
+      });
     } catch (error) {
       reject(error);
     }
@@ -324,52 +346,6 @@ const deleteFavoriteProduct = (userId, productId) => {
     .catch((error) => Promise.reject(error.message));
 };
 
-// const getFavoriteProducts = (page = 1, itemsPerPage = 15, userId) => {
-//   const skip = (page - 1) * itemsPerPage;
-
-//   return User.findById(userId)
-//     .skip(skip)
-//     .limit(itemsPerPage)
-//     .populate({
-//       path: "favoriteProducts",
-//       populate: [
-//         { path: "category", select: "id name" },
-//         { path: "seller", select: "id shopName" },
-//       ],
-//     })
-//     .then((user) => {
-//       if (!user) return Promise.reject("User not found");
-
-//       const formattedFavorites = user.favoriteProducts.map((product) => ({
-//         id: product._id.toString(),
-//         name: product.name,
-//         description: product.description,
-//         price: product.price,
-//         salePercent: product.salePercent || 0,
-//         priceAfterSale: product.priceAfterSale || product.price,
-//         isFavorite: true,
-//         shopInfor: product.seller
-//           ? {
-//               shopId: product.seller._id.toString(),
-//               shopName: product.seller.shopName,
-//             }
-//           : null,
-//         category: product.category.map((cat) => ({
-//           id: cat._id.toString(),
-//           name: cat.name,
-//         })),
-//         discount: product.discount ? product.discount._id.toString() : null,
-//         rates: {
-//           star: product.rate || 0,
-//         },
-//         image: product.thumbnail || "",
-//       }));
-
-//       return Promise.resolve(formattedFavorites);
-//     })
-//     .catch((error) => Promise.reject(error.message));
-// };
-
 const getFavoriteProducts = (page = 1, itemsPerPage = 15, userId) => {
   const skip = (page - 1) * itemsPerPage;
 
@@ -388,7 +364,7 @@ const getFavoriteProducts = (page = 1, itemsPerPage = 15, userId) => {
       const totalPages = Math.ceil(totalItems / itemsPerPage); // Tổng số trang
 
       // Phân trang chỉ lấy sản phẩm trong phạm vi hiện tại
-      const paginatedFavorites = user.favoriteProducts
+      const favoriteProducts = user.favoriteProducts
         .slice(skip, skip + itemsPerPage)
         .map((product) => ({
           id: product._id.toString(),
@@ -417,7 +393,7 @@ const getFavoriteProducts = (page = 1, itemsPerPage = 15, userId) => {
 
       // Trả về kết quả kèm thông tin phân trang
       return Promise.resolve({
-        data: paginatedFavorites,
+        favoriteProducts,
         pagination: {
           currentPage: page,
           totalPages: totalPages,

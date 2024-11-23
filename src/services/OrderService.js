@@ -15,6 +15,10 @@ class OrderService {
           path: "items.productId",
           select: "id name price priceAfterSale image",
         })
+        .populate({
+          path: "items.sellerId",
+          select: "shopName", // Chỉ chọn trường shopName
+        })
         .populate("paymentMethod", "name") // Populate `name` field from `PaymentMethod` collection
         .populate("deliveryMethod", "name") // Populate `name` field from `DeliveryMethod` collection
         .sort({ createdAt: -1 })
@@ -45,6 +49,7 @@ class OrderService {
                   price: product.price,
                   priceAfterSale: product.priceAfterSale,
                   thumbnail: product.thumbnail, // Assuming thumbnail is a virtual field
+                  shopName: item.sellerId.shopName,
                 }
               : null,
             quantity: item.quantity,
@@ -215,6 +220,10 @@ class OrderService {
   async getOrderDetails(orderId) {
     try {
       const order = await Order.findById(orderId)
+        .populate({
+          path: "items.sellerId",
+          select: "shopName", // Chỉ chọn trường shopName
+        })
         .populate("items.productId")
         .populate("paymentMethod", "name") // Lấy field `name` từ `PaymentMethod`
         .populate("deliveryMethod", "name"); // Lấy field `name` từ `DeliveryMethod`; // Populate product details
@@ -245,6 +254,7 @@ class OrderService {
             salePercent: item.productId.salePercent,
             priceAfterSale: item.productId.priceAfterSale,
             image: item.productId.thumbnail, // Assuming product has an image field
+            shopName: item.sellerId.shopName
           },
           quantity: item.quantity,
           SKU: item.SKU,

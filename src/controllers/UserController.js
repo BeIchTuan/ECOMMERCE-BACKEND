@@ -243,7 +243,11 @@ const getCustomerInfor = async (req, res) => {
 const getOrderCustomerHistory = async (req, res) => {
   try {
     const customerId = req.params.customerId; // Assuming the user ID is provided as a URL parameter
-    const result = await UserService.getCustomerOrderHistory(customerId);
+
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 15;
+
+    const result = await UserService.getCustomerOrderHistory(page, limit, customerId);
 
     res.status(200).json(result);
   } catch (error) {
@@ -301,10 +305,10 @@ const getFavoriteProducts = (req, res) => {
   const limit = parseInt(req.query.limit) || 15;
 
   UserService.getFavoriteProducts(page, limit, userId)
-    .then((favoriteProducts) => {
+    .then((data) => {
       res.json({
         status: "success",
-        favoriteProducts,
+        data,
       });
     })
     .catch((error) => {
