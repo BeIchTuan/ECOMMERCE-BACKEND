@@ -2,6 +2,7 @@
 const Message = require("./models/MessageModel");
 const Conversation = require("./models/ConversationModel");
 const User = require("./models/UserModel");
+const ConversationController = require("./controllers/ConversationController");
 
 class ChatService {
   constructor(wss) {
@@ -111,6 +112,8 @@ class ChatService {
       await this.handleChatMessage(ws, messageData);
     } else if (messageData.type === "getHistory") {
       await this.handleGetHistory(ws, messageData);
+    } else if (messageData.type === "getConversations") {
+      await this.handleGetConversation2(ws, messageData);
     }
   }
 
@@ -118,6 +121,22 @@ class ChatService {
     const { conversationId, sender, content, recipientId } = messageData;
 
     try {
+      // Lấy thông tin người gửi từ cơ sở dữ liệu
+      const senderInfo = await User.findById(sender).select(
+        "name avatar shopName role"
+      );
+      if (!senderInfo) {
+        throw new Error("Sender not found");
+      }
+
+      // Xác định vai trò và thêm shopName nếu role là 'seller'
+      const senderData = {
+        senderId: sender,
+        senderName: senderInfo.name,
+        senderAvatar: senderInfo.avatar,
+        ...(senderInfo.role === "seller" && { senderName: senderInfo.shopName }), // Thêm shopName nếu role là seller
+      };
+
       // Lưu tin nhắn vào MongoDB
       const newMessage = new Message({
         conversationId,
@@ -131,6 +150,14 @@ class ChatService {
 
       await newMessage.save();
 
+      // Dữ liệu tin nhắn trả về
+      const responseMessage = {
+        messageId: newMessage._id,
+        ...senderData, // Gộp thông tin người gửi
+        content,
+        time: newMessage.timestamp,
+      };
+
       // Phản hồi thành công cho người gửi
       ws.send(
         JSON.stringify({
@@ -143,13 +170,21 @@ class ChatService {
       const recipientSockets = this.clients[recipientId];
       if (recipientSockets && recipientSockets.length > 0) {
         recipientSockets.forEach((socket) => {
+          /**
+          {
+              "messageId": "674311590f89bac711674fb6",
+              "senderId": "670fbccb69c796fe8ad0f8d6",
+              "senderName": "Nguyễn Công Tú",
+              "senderAvatar": "https://res.cloudinary.com/dfxkyz3ay/image/upload/v1732292564/avatar/ognixl1zidpshnatg0uw.png",
+              "content": "client send seller",
+              "time": "2024-11-24T11:43:21.748Z"
+          } => trả về như thế này
+           */
+
           socket.send(
             JSON.stringify({
               type: "chatMessage",
-              conversationId,
-              sender,
-              content,
-              timestamp: new Date(),
+              ...responseMessage,
             })
           );
         });
@@ -232,11 +267,15 @@ class ChatService {
       ws.send(
         JSON.stringify({
           status: "success",
-          recipient: {
-            recipientId: recipient._id,
-            recipientName,
-            recipientAvatar: recipient.avatar,
-          },
+          // recipient: {
+          //   recipientId: recipient._id,
+          //   recipientName,
+          //   recipientAvatar: recipient.avatar,
+          // }, -> sửa thành cái ở dưới
+          type: "getHistory",
+          recipientId: recipient._id,
+          recipientName,
+          recipientAvatar: recipient.avatar,
           messages: messages.map((msg) => ({
             messageId: msg._id,
             senderId: msg.sender._id,
@@ -258,6 +297,11 @@ class ChatService {
         })
       );
     }
+  }
+
+  // thêm hàm mới giống hàm này hoặc giữ nguyên
+  async handleGetConversation2(ws, requestData) {
+    ConversationController.getUserConversations2(ws, requestData);
   }
 }
 
