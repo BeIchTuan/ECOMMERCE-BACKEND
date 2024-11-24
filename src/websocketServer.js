@@ -152,6 +152,7 @@ class ChatService {
 
       // Dữ liệu tin nhắn trả về
       const responseMessage = {
+        conversationId,
         messageId: newMessage._id,
         ...senderData, // Gộp thông tin người gửi
         content,
@@ -273,6 +274,7 @@ class ChatService {
           //   recipientAvatar: recipient.avatar,
           // }, -> sửa thành cái ở dưới
           type: "getHistory",
+          conversationId: conversationId,
           recipientId: recipient._id,
           recipientName,
           recipientAvatar: recipient.avatar,
