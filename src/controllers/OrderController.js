@@ -9,12 +9,20 @@ class OrderController {
       const page = parseInt(req.query.page) || 1;
       const limit = parseInt(req.query.limit) || 15;
 
-      const result = await OrderService.getOrders(userId, page, limit);
+      const deliveryStatus = req.query.deliveryStatus; // Lấy `deliveryStatus` từ query parameters
+
+      const result = await OrderService.getOrders(
+        userId,
+        page,
+        limit,
+        deliveryStatus
+      );
       res.json(result);
     } catch (error) {
       res.status(500).json({
         status: "error",
         message: "Failed to retrieve orders",
+        error: error
       });
     }
   }

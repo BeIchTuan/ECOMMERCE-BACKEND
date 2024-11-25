@@ -3,17 +3,25 @@ const Product = require("../models/ProductModel");
 const Discount = require("../models/DiscountModel");
 
 class OrderService {
-  async getOrders(userId, page = 1, itemsPerPage = 15) {
+  async getOrders(userId, page = 1, itemsPerPage = 15, deliveryStatus) {
     try {
       const skip = (page - 1) * itemsPerPage;
-      // Get the total count of orders for pagination
-      const totalOrders = await Order.countDocuments({ userId: userId });
+
+      const filter = { userId: userId };
+      if (deliveryStatus) {
+        filter.deliveryStatus = deliveryStatus; // Thêm điều kiện lọc
+      }
+      const totalOrders = await Order.countDocuments(filter);
       const totalPages = Math.ceil(totalOrders / itemsPerPage);
 
-      const orders = await Order.find({ userId: userId })
+      const orders = await Order.find(filter)
         .populate({
           path: "items.productId",
-          select: "id name price priceAfterSale image",
+          select: "id name price priceAfterSale image rates", // Thêm trường `rates` vào populate
+          populate: {
+            path: "rates",
+            select: "stars comment reply", // Chọn trường cần lấy từ `rates`
+          },
         })
         .populate({
           path: "items.sellerId",
@@ -49,9 +57,19 @@ class OrderService {
                   price: product.price,
                   priceAfterSale: product.priceAfterSale,
                   thumbnail: product.thumbnail, // Assuming thumbnail is a virtual field
-                  shopName: item.sellerId.shopName,
+                  rates:
+                    item.productId.rates?.map((rate) => ({
+                      id: rate._id,
+                      stars: rate.stars,
+                      comment: rate.comment,
+                      reply: rate.reply,
+                    })) || [],
                 }
               : null,
+            shopInfor: {
+              shopId: item.sellerId._id,
+              shopName: item.sellerId.shopName,
+            },
             quantity: item.quantity,
             SKU: item.SKU,
           };
@@ -220,10 +238,7 @@ class OrderService {
   async getOrderDetails(orderId) {
     try {
       const order = await Order.findById(orderId)
-        .populate({
-          path: "items.sellerId",
-          select: "shopName", // Chỉ chọn trường shopName
-        })
+        .populate("items.sellerId", "shopName")
         .populate("items.productId")
         .populate("paymentMethod", "name") // Lấy field `name` từ `PaymentMethod`
         .populate("deliveryMethod", "name"); // Lấy field `name` từ `DeliveryMethod`; // Populate product details
@@ -253,8 +268,8 @@ class OrderService {
             price: item.productId.price,
             salePercent: item.productId.salePercent,
             priceAfterSale: item.productId.priceAfterSale,
+            shopName: item.sellerId.shopName,
             image: item.productId.thumbnail, // Assuming product has an image field
-            shopName: item.sellerId.shopName
           },
           quantity: item.quantity,
           SKU: item.SKU,
