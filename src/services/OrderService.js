@@ -47,6 +47,10 @@ class OrderService {
           location: order.address.location,
           phone: order.address.phone,
         },
+        shopInfo: order.items.map((item) => ({
+          shopId: item.sellerId?._id || null,
+          shopName: item.sellerId?.shopName || "Unknown",
+        }))[0],
         items: order.items.map((item) => {
           const product = item.productId?.toJSON(); // Convert to JSON to include virtuals
           return {
@@ -66,10 +70,6 @@ class OrderService {
                     })) || [],
                 }
               : null,
-            shopInfor: {
-              shopId: item.sellerId._id,
-              shopName: item.sellerId.shopName,
-            },
             quantity: item.quantity,
             SKU: item.SKU,
           };
