@@ -148,6 +148,9 @@ const updateUser = async (req, res) => {
     if (req.file) {
       const uploadResult = await uploadToCloudinary(req.file, "avatar");
       fieldsToUpdate.avatar = uploadResult.secure_url; // Lưu URL của ảnh vào avatar
+    } else {
+      // Nếu không có ảnh mới, giữ nguyên avatar cũ
+      fieldsToUpdate.avatar = user.avatar;
     }
 
     const response = await UserService.updateUser(userId, fieldsToUpdate);
@@ -211,11 +214,7 @@ const getCustomerInfors = async (req, res) => {
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 15;
   try {
-    const data = await UserService.getCustomerInfors(
-      sellerId,
-      page,
-      limit
-    );
+    const data = await UserService.getCustomerInfors(sellerId, page, limit);
     res.status(200).json(data);
   } catch (error) {
     res.status(500).json({ status: "error", message: error.message });

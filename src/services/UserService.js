@@ -156,6 +156,8 @@ const updateUser = (id, data) => {
           .join("/")
           .split(".")[0]; // Lấy publicId từ URL
         await deleteFromCloudinary(publicId); // Xóa ảnh cũ
+      } else if (!data.avatar && user.avatar) {
+        data.avatar = user.avatar; // Giữ nguyên avatar cũ nếu không có avatar mới
       }
 
       if (data.address) {
@@ -268,7 +270,6 @@ const getCustomerInfors = async (sellerId, page = 1, itemsPerPage = 15) => {
       .select("_id name email phone")
       .skip((page - 1) * itemsPerPage)
       .limit(itemsPerPage);
-
 
     const totalCustomers = customerIds.length;
     const totalPages = Math.ceil(totalCustomers / itemsPerPage);
