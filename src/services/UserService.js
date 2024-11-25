@@ -260,7 +260,16 @@ const getCustomerInfors = async (sellerId, page = 1, itemsPerPage = 15) => {
     const orders = await Order.aggregate([
       { $match: { "items.sellerId": sellerId } },
       { $unwind: "$items" },
-      { $group: { _id: "$userId", ordersCount: { $sum: 1 } } },
+      //{ $group: { _id: "$userId", ordersCount: { $sum: 1 } } },
+      {
+        $group: {
+          _id: "$userId",
+          ordersCount: { $sum: 1 }, // Đếm số lượng đơn hàng
+          totalSpent: {
+            $sum: { $subtract: ["$totalPrice", "$shippingCost"] }, // Tổng tiền đã chi tiêu (trừ phí ship)
+          },
+        },
+      },
     ]);
 
     const customerIds = orders.map((order) => order._id);
@@ -281,6 +290,7 @@ const getCustomerInfors = async (sellerId, page = 1, itemsPerPage = 15) => {
       return {
         ...customer.toObject(),
         ordersBought: customerOrders ? customerOrders.ordersCount : undefined,
+        totalSpent: customerOrders ? customerOrders.totalSpent : undefined,
       };
     });
 
@@ -308,20 +318,62 @@ const getCustomerOrderHistory = (page = 1, itemsPerPage = 15, userId) => {
       // Đếm tổng số lượng đơn hàng của user
       const totalItems = await Order.countDocuments({ userId });
 
-      // Truy vấn các đơn hàng với phân trang
       const orders = await Order.find({ userId })
+        .populate({
+          path: "items.productId",
+          select: "id name price priceAfterSale image rates", // Thêm trường `rates` vào populate
+          populate: {
+            path: "rates",
+            select: "stars comment reply", // Chọn trường cần lấy từ `rates`
+          },
+        })
+        .populate({
+          path: "items.sellerId",
+          select: "shopName", // Chỉ chọn trường shopName
+        })
+        .populate("paymentMethod", "name") // Populate `name` field from `PaymentMethod` collection
+        .populate("deliveryMethod", "name") // Populate `name` field from `DeliveryMethod` collection
+        .sort({ createdAt: -1 })
         .skip(skip)
-        .limit(itemsPerPage)
-        .select("createdAt totalPrice")
-        .sort({ createdAt: -1 }); // Sort by date in descending order
+        .limit(itemsPerPage);
 
-      console.log(userId);
-
-      // Format the orders for the response
-      const orderHistory = orders.map((order) => ({
+      const formattedOrders = orders.map((order) => ({
         orderId: order._id,
         orderDate: order.createdAt,
         totalPrice: order.totalPrice,
+        paymentMethod: order.paymentMethod ? order.paymentMethod.name : null, // Access `name` if `paymentMethod` is populated
+        deliveryMethod: order.deliveryMethod ? order.deliveryMethod.name : null, // Access `name` if `deliveryMethod` is populated
+        paymentStatus: order.paymentStatus,
+        shippingCost: order.shippingCost,
+        deliveryStatus: order.deliveryStatus,
+        address: {
+          nameOfLocation: order.address.nameOfLocation,
+          location: order.address.location,
+          phone: order.address.phone,
+        },
+        items: order.items.map((item) => {
+          const product = item.productId?.toJSON(); // Convert to JSON to include virtuals
+          return {
+            product: product
+              ? {
+                  id: item.productId._id,
+                  name: product.name,
+                  price: product.price,
+                  priceAfterSale: product.priceAfterSale,
+                  thumbnail: product.thumbnail, // Assuming thumbnail is a virtual field
+                  rates:
+                    item.productId.rates?.map((rate) => ({
+                      id: rate._id,
+                      stars: rate.stars,
+                      comment: rate.comment,
+                      reply: rate.reply,
+                    })) || [],
+                }
+              : null,
+            quantity: item.quantity,
+            SKU: item.SKU,
+          };
+        }),
       }));
 
       // Tính toán tổng số trang
@@ -329,7 +381,7 @@ const getCustomerOrderHistory = (page = 1, itemsPerPage = 15, userId) => {
 
       resolve({
         status: "success",
-        orderHistory,
+        orderHistory: formattedOrders,
         pagination: {
           currentPage: page,
           totalPages,
