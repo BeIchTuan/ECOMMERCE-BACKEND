@@ -376,10 +376,10 @@ class ProductService {
       return {
         products: formattedProducts,
         pagination: {
-          currentPage: page,
-          totalPages,
-          itemsPerPage,
-          totalItems,
+          currentPage: parseInt(page, 10),
+          totalPages: parseInt(totalPages, 10),
+          itemsPerPage: parseInt(itemsPerPage, 10),
+          totalItems: parseInt(totalItems, 10),
         },
       };
     } catch (error) {
