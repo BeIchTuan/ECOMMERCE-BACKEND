@@ -206,37 +206,19 @@ const getUser = async (req, res) => {
   }
 };
 
-const getCustomerInfor = async (req, res) => {
+const getCustomerInfors = async (req, res) => {
+  const sellerId = req.id; // Assuming the seller's ID is in the token
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 15;
   try {
-    const customerId = req.params.customerId; // Assuming the user ID is passed in the URL
-    console.log(customerId);
-    const result = await UserService.getCustomerInfor(customerId);
-
-    if (!result.success) {
-      return res.status(404).json({
-        status: "error",
-        message: "Failed to fetch customer contact",
-        message: result.message,
-      });
-    }
-
-    const user = result.user;
-    const response = {
-      status: "success",
-      contactInfo: {
-        name: user.name,
-        email: user.email,
-        phone: user.phone,
-      },
-    };
-
-    return res.status(200).json(response);
+    const data = await UserService.getCustomerInfors(
+      sellerId,
+      page,
+      limit
+    );
+    res.status(200).json(data);
   } catch (error) {
-    return res.status(500).json({
-      status: "error",
-      message: "Failed to fetch customer contact",
-      message: error.message,
-    });
+    res.status(500).json({ status: "error", message: error.message });
   }
 };
 
@@ -247,7 +229,11 @@ const getOrderCustomerHistory = async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 15;
 
-    const result = await UserService.getCustomerOrderHistory(page, limit, customerId);
+    const result = await UserService.getCustomerOrderHistory(
+      page,
+      limit,
+      customerId
+    );
 
     res.status(200).json(result);
   } catch (error) {
@@ -329,6 +315,6 @@ module.exports = {
   addFavouriteProduct,
   deleteFavoriteProduct,
   getFavoriteProducts,
-  getCustomerInfor,
+  getCustomerInfors,
   getOrderCustomerHistory,
 };

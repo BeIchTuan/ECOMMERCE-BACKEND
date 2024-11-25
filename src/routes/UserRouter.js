@@ -17,7 +17,7 @@ router.delete('/favorites/:productId', authMiddleware(['user']), userController.
 router.get('/favorites', authMiddleware(['user']), userController.getFavoriteProducts)
 
 //Seller
-router.get('/seller/customers/:customerId/contact', authMiddleware(['seller']), userController.getCustomerInfor)
+router.get('/seller/customers', authMiddleware(['seller']), userController.getCustomerInfors)
 router.get('/seller/customers/:customerId/orders', authMiddleware(['seller']), userController.getOrderCustomerHistory)
 
 module.exports = router

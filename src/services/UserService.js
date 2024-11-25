@@ -250,20 +250,53 @@ const getUser = (id) => {
   });
 };
 
-const getCustomerInfor = (userId) => {
-  return new Promise(async (resolve, reject) => {
-    try {
-      const user = await User.findById(userId).select("name email phone"); // Select only necessary fields
+const getCustomerInfors = async (sellerId, page = 1, itemsPerPage = 15) => {
+  try {
+    const ObjectId = mongoose.Types.ObjectId;
+    sellerId = new ObjectId(sellerId);
 
-      if (!user) {
-        return resolve({ success: false, message: "User not found" });
-      }
+    const orders = await Order.aggregate([
+      { $match: { "items.sellerId": sellerId } },
+      { $unwind: "$items" },
+      { $group: { _id: "$userId", ordersCount: { $sum: 1 } } },
+    ]);
 
-      resolve({ success: true, user });
-    } catch (error) {
-      reject(error); // Reject with the error message
-    }
-  });
+    const customerIds = orders.map((order) => order._id);
+    console.log("Customer IDs:", customerIds);
+
+    const customers = await User.find({ _id: { $in: customerIds } })
+      .select("_id name email phone")
+      .skip((page - 1) * itemsPerPage)
+      .limit(itemsPerPage);
+
+
+    const totalCustomers = customerIds.length;
+    const totalPages = Math.ceil(totalCustomers / itemsPerPage);
+
+    const customersWithOrders = customers.map((customer) => {
+      const customerOrders = orders.find((order) =>
+        order._id.equals(customer._id)
+      );
+      return {
+        ...customer.toObject(),
+        ordersBought: customerOrders ? customerOrders.ordersCount : undefined,
+      };
+    });
+
+    return {
+      status: "success",
+      customers: customersWithOrders,
+      pagination: {
+        currentPage: page,
+        totalPages,
+        itemsPerPage,
+        totalItems: totalCustomers,
+      },
+    };
+  } catch (error) {
+    console.error("Error in getCustomerInfors:", error.message);
+    throw new Error(error.message);
+  }
 };
 
 const getCustomerOrderHistory = (page = 1, itemsPerPage = 15, userId) => {
@@ -281,7 +314,7 @@ const getCustomerOrderHistory = (page = 1, itemsPerPage = 15, userId) => {
         .select("createdAt totalPrice")
         .sort({ createdAt: -1 }); // Sort by date in descending order
 
-      console.log(userId)
+      console.log(userId);
 
       // Format the orders for the response
       const orderHistory = orders.map((order) => ({
@@ -346,50 +379,6 @@ const deleteFavoriteProduct = (userId, productId) => {
     .catch((error) => Promise.reject(error.message));
 };
 
-// const getFavoriteProducts = (page = 1, itemsPerPage = 15, userId) => {
-//   const skip = (page - 1) * itemsPerPage;
-
-//   return User.findById(userId)
-//     .populate({
-//       path: "favoriteProducts",
-//       populate: [
-//         { path: "category", select: "id name" },
-//         { path: "seller", select: "id shopName" },
-//       ],
-//     })
-//     .then((user) => {
-//       if (!user) return Promise.reject("User not found");
-
-//       const formattedFavorites = user.favoriteProducts.map((product) => ({
-//         id: product._id.toString(),
-//         name: product.name,
-//         description: product.description,
-//         price: product.price,
-//         salePercent: product.salePercent || 0,
-//         priceAfterSale: product.priceAfterSale || product.price,
-//         isFavorite: true,
-//         shopInfor: product.seller
-//           ? {
-//               shopId: product.seller._id.toString(),
-//               shopName: product.seller.shopName,
-//             }
-//           : null,
-//         category: product.category.map((cat) => ({
-//           id: cat._id.toString(),
-//           name: cat.name,
-//         })),
-//         discount: product.discount ? product.discount._id.toString() : null,
-//         rates: {
-//           star: product.rate || 0,
-//         },
-//         image: product.thumbnail || "",
-//       }));
-
-//       return Promise.resolve(formattedFavorites);
-//     })
-//     .catch((error) => Promise.reject(error.message));
-// };
-
 const getFavoriteProducts = (page = 1, itemsPerPage = 15, userId) => {
   const skip = (page - 1) * itemsPerPage;
 
@@ -411,7 +400,6 @@ const getFavoriteProducts = (page = 1, itemsPerPage = 15, userId) => {
       const favoriteProducts = user.favoriteProducts
         .slice(skip, skip + itemsPerPage)
         .map((product) => ({
-          
           id: product._id.toString(),
           name: product.name,
           averageStar: product.averageStar,
@@ -463,6 +451,6 @@ module.exports = {
   addFavoriteProduct,
   deleteFavoriteProduct,
   getFavoriteProducts,
-  getCustomerInfor,
+  getCustomerInfors,
   getCustomerOrderHistory,
 };
