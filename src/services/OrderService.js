@@ -1,129 +1,17 @@
 const Order = require("../models/OrderModel");
 const Product = require("../models/ProductModel");
 const Discount = require("../models/DiscountModel");
+const mongoose = require("mongoose");
 
 class OrderService {
-  // async getOrders(userId, page = 1, itemsPerPage = 15, deliveryStatus) {
-  //   try {
-  //     const skip = (page - 1) * itemsPerPage;
-
-  //     const filter = { userId: userId };
-  //     if (deliveryStatus) {
-  //       filter.deliveryStatus = deliveryStatus; // Thêm điều kiện lọc
-  //     }
-  //     const totalOrders = await Order.countDocuments(filter);
-  //     const totalPages = Math.ceil(totalOrders / itemsPerPage);
-
-  //     const orders = await Order.find(filter)
-  //       .populate({
-  //         path: "items.productId",
-  //         select: "id name price priceAfterSale image rates", // Thêm trường `rates` vào populate
-  //         populate: {
-  //           path: "rates",
-  //           select: "stars comment reply", // Chọn trường cần lấy từ `rates`
-  //         },
-  //       })
-  //       .populate({
-  //         path: "items.sellerId",
-  //         select: "shopName", // Chỉ chọn trường shopName
-  //       })
-  //       .populate("paymentMethod", "name") // Populate `name` field from `PaymentMethod` collection
-  //       .populate("deliveryMethod", "name") // Populate `name` field from `DeliveryMethod` collection
-  //       .sort({ createdAt: -1 })
-  //       .skip(skip)
-  //       .limit(itemsPerPage);
-
-  //     const formattedOrders = orders.map((order) => ({
-  //       orderId: order._id,
-  //       orderDate: order.createdAt,
-  //       totalPrice: order.totalPrice,
-  //       paymentMethod: order.paymentMethod ? order.paymentMethod.name : null, // Access `name` if `paymentMethod` is populated
-  //       deliveryMethod: order.deliveryMethod ? order.deliveryMethod.name : null, // Access `name` if `deliveryMethod` is populated
-  //       paymentStatus: order.paymentStatus,
-  //       shippingCost: order.shippingCost,
-  //       deliveryStatus: order.deliveryStatus,
-  //       address: {
-  //         nameOfLocation: order.address.nameOfLocation,
-  //         location: order.address.location,
-  //         phone: order.address.phone,
-  //       },
-  //       shopInfo: order.items.map((item) => ({
-  //         shopId: item.sellerId?._id || null,
-  //         shopName: item.sellerId?.shopName || "Unknown",
-  //       }))[0],
-  //       items: order.items.map((item) => {
-  //         const product = item.productId?.toJSON(); // Convert to JSON to include virtuals
-  //         return {
-  //           product: product
-  //             ? {
-  //                 id: item.productId._id,
-  //                 name: product.name,
-  //                 price: product.price,
-  //                 priceAfterSale: product.priceAfterSale,
-  //                 thumbnail: product.thumbnail, // Assuming thumbnail is a virtual field
-  //                 rates:
-  //                   item.productId.rates?.map((rate) => ({
-  //                     id: rate._id,
-  //                     stars: rate.stars,
-  //                     comment: rate.comment,
-  //                     reply: rate.reply,
-  //                   })) || [],
-  //               }
-  //             : null,
-  //           quantity: item.quantity,
-  //           SKU: item.SKU,
-  //         };
-  //       }),
-  //     }));
-
-  //     return {
-  //       status: "success",
-  //       orders: formattedOrders,
-  //       pagination: {
-  //         currentPage: page,
-  //         totalPages,
-  //         itemsPerPage,
-  //         totalOrders,
-  //       },
-  //     };
-  //   } catch (error) {
-  //     console.error("Error retrieving orders:", error.message); // Log error details
-  //     return {
-  //       status: "error",
-  //       message: "Failed to retrieve orders",
-  //       error: error.message,
-  //     };
-  //   }
-  // }
-  async getOrders(
-    userId,
-    page = 1,
-    itemsPerPage = 15,
-    deliveryStatus,
-    isRated
-  ) {
+  async getOrders(userId, page = 1, itemsPerPage = 15, deliveryStatus) {
     try {
       const skip = (page - 1) * itemsPerPage;
-
+      
       // Tạo bộ lọc cơ bản
       const filter = { userId: userId };
       if (deliveryStatus) {
         filter.deliveryStatus = deliveryStatus;
-      }
-
-      // Thêm logic lọc theo `isRated`
-      if (isRated !== null) {
-        if (isRated === false) {
-          // Thành công nhưng chưa đánh giá
-          filter.deliveryStatus = "success";
-          filter["items.productId.rates"] = {
-            $not: { $elemMatch: { user: userId } },
-          };
-        } else if (isRated === true) {
-          // Thành công và đã đánh giá
-          filter.deliveryStatus = "success";
-          filter["items.productId.rates"] = { $elemMatch: { user: userId } };
-        }
       }
 
       const totalOrders = await Order.countDocuments(filter);
@@ -136,7 +24,7 @@ class OrderService {
           populate: {
             path: "rates",
             match: { user: userId }, // Chỉ lấy đánh giá của người đặt hàng
-            select: "star comment reply", // Chọn trường cần lấy từ rates
+            select: "star comment reply user", // Chọn trường cần lấy từ rates
           },
         })
         .populate({
@@ -169,6 +57,7 @@ class OrderService {
         }))[0],
         items: order.items.map((item) => {
           const product = item.productId?.toJSON();
+          const rates = item.productId?.rates || [];
           return {
             product: product
               ? {
@@ -177,11 +66,12 @@ class OrderService {
                   price: product.price,
                   priceAfterSale: product.priceAfterSale,
                   thumbnail: product.thumbnail,
-                  rates: item.productId.rates || [], 
+                  rates: rates,
                 }
               : null,
             quantity: item.quantity,
             SKU: item.SKU,
+            isRated: rates.length > 0,
           };
         }),
       }));
