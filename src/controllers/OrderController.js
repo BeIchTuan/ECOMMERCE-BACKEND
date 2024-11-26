@@ -11,11 +11,17 @@ class OrderController {
 
       const deliveryStatus = req.query.deliveryStatus; // Lấy `deliveryStatus` từ query parameters
 
+      const isRated =
+      req.query.isRated !== undefined
+        ? req.query.isRated === "true"
+        : null;
+
       const result = await OrderService.getOrders(
         userId,
         page,
         limit,
-        deliveryStatus
+        deliveryStatus,
+        isRated,
       );
       res.json(result);
     } catch (error) {
