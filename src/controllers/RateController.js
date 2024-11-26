@@ -18,6 +18,7 @@ class RateController {
       res.status(201).json({
         status: "success",
         message: "Review submitted successfully",
+        rate
       });
     } catch (error) {
       res.status(400).json({ error: error.message });
