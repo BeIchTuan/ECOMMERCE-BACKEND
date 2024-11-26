@@ -276,7 +276,7 @@ const getCustomerInfors = async (sellerId, page = 1, itemsPerPage = 15) => {
     console.log("Customer IDs:", customerIds);
 
     const customers = await User.find({ _id: { $in: customerIds } })
-      .select("_id name email phone")
+      .select("_id name email phone avatar")
       .skip((page - 1) * itemsPerPage)
       .limit(itemsPerPage);
 
