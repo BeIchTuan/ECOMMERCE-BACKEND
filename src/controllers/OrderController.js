@@ -3,26 +3,54 @@ const PaymentMethod = require("../models/PaymentMethodModel");
 const DeliveryMethod = require("../models/DeliveryMethodModel");
 
 class OrderController {
+  // async getOrders(req, res) {
+  //   try {
+  //     const userId = req.id; // Lấy userId từ middleware xác thực
+  //     const page = parseInt(req.query.page) || 1;
+  //     const limit = parseInt(req.query.limit) || 15;
+
+  //     const deliveryStatus = req.query.deliveryStatus; // Lấy `deliveryStatus` từ query parameters
+
+  //     const result = await OrderService.getOrders(
+  //       userId,
+  //       page,
+  //       limit,
+  //       deliveryStatus,
+  //     );
+  //     res.json(result);
+  //   } catch (error) {
+  //     res.status(500).json({
+  //       status: "error",
+  //       message: "Failed to retrieve orders",
+  //       error: error
+  //     });
+  //   }
+  // }
   async getOrders(req, res) {
     try {
       const userId = req.id; // Lấy userId từ middleware xác thực
       const page = parseInt(req.query.page) || 1;
       const limit = parseInt(req.query.limit) || 15;
-
-      const deliveryStatus = req.query.deliveryStatus; // Lấy `deliveryStatus` từ query parameters
+      const deliveryStatus = req.query.deliveryStatus
+        ? req.query.deliveryStatus
+        : undefined;
+      const isRated = req.query.isRated
+        ? req.query.isRated === "true"
+        : undefined;
 
       const result = await OrderService.getOrders(
         userId,
         page,
         limit,
         deliveryStatus,
+        isRated
       );
       res.json(result);
     } catch (error) {
       res.status(500).json({
         status: "error",
         message: "Failed to retrieve orders",
-        error: error
+        error: error,
       });
     }
   }

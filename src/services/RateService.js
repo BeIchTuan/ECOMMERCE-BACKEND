@@ -17,17 +17,7 @@ class RateService {
       star,
       comment,
     });
-
-    // Cập nhật mảng `rates` trong Product
-    // await Product.findByIdAndUpdate(productId, {
-    //   $push: { rates: newRate._id },
-    // });
-
-    // // Cập nhật lại số sao trung bình của sản phẩm
-    // await this.updateProductAverageStar(productId);
-
-    // // Lưu đánh giá vào cơ sở dữ liệu
-    // return await newRate.save();
+    
     const savedRate = await newRate.save();
 
     // Cập nhật mảng `rates` trong Product
