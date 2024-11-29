@@ -18,7 +18,7 @@ class RateService {
       star,
       comment,
     });
-    
+
     const savedRate = await newRate.save();
 
     // Cập nhật mảng `rates` trong Product
@@ -83,7 +83,7 @@ class RateService {
   // Lấy tất cả đánh giá của một sản phẩm
   async getRatesByProduct(productId) {
     return await Rate.find({ product: productId })
-      .populate("user", "name") // Hiển thị tên người dùng đánh giá
+      .populate({ path: "user", select: "name avatar" }) // Hiển thị tên người dùng đánh giá
       .exec();
   }
   //Xóa đánh giá
@@ -124,13 +124,20 @@ class RateService {
   //Trả lời đánh giá
   async replyToRate(rateId, userId, replyContent) {
     // Tìm đánh giá và lấy thông tin sản phẩm được đánh giá
-    const rate = await Rate.findById(rateId).populate("product");
+    const rate = await Rate.findById(rateId)
+      .populate("product")
+      .populate("order");
 
     if (!rate) {
       throw new Error("Rate not found");
     }
 
     const product = rate.product;
+
+    // Kiểm tra nếu không có sản phẩm hoặc đơn hàng liên quan
+    if (!product || !order) {
+      throw new Error("Invalid rate: missing product or order information");
+    }
 
     // Kiểm tra nếu người dùng là chủ sở hữu của sản phẩm
     if (product.seller.toString() !== userId.toString()) {
