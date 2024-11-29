@@ -1,6 +1,7 @@
 const Order = require("../models/OrderModel");
 const Product = require("../models/ProductModel");
 const Discount = require("../models/DiscountModel");
+const Rate = require("../models/RateModel");
 const mongoose = require("mongoose");
 
 class OrderService {
@@ -96,6 +97,123 @@ class OrderService {
   //   }
   // }
 
+  // async getOrders(
+  //   userId,
+  //   page = 1,
+  //   itemsPerPage = 15,
+  //   deliveryStatus,
+  //   isRated
+  // ) {
+  //   try {
+  //     const skip = (page - 1) * itemsPerPage;
+
+  //     // Tạo bộ lọc cơ bản
+  //     const filter = { userId: userId };
+  //     if (deliveryStatus) {
+  //       filter.deliveryStatus = deliveryStatus;
+  //     }
+
+  //     const orders = await Order.find(filter)
+  //       .populate({
+  //         path: "items.productId",
+  //         select: "id name price priceAfterSale image rates",
+  //         populate: {
+  //           path: "rates",
+  //           match: { user: userId }, // Chỉ lấy đánh giá của người dùng
+  //           select: "star order comment reply user",
+  //         },
+  //       })
+  //       .populate({
+  //         path: "items.sellerId",
+  //         select: "shopName",
+  //       })
+  //       .populate("paymentMethod", "name")
+  //       .populate("deliveryMethod", "name")
+  //       .sort({ createdAt: -1 })
+  //       .skip(skip)
+  //       .limit(itemsPerPage);
+
+  //     const formattedOrders = orders
+  //       .map((order) => {
+  //         const filteredItems = order.items.filter((item) => {
+  //           const rates = Rate.find({
+  //             user: userId,
+  //             product: item.productId?._id,
+  //             order: order._id,
+  //           }).select("stars order comment reply user");
+  //           return rates;
+  //         });
+
+  //         return {
+  //           orderId: order._id,
+  //           orderDate: order.createdAt,
+  //           totalPrice: order.totalPrice,
+  //           paymentMethod: order.paymentMethod
+  //             ? order.paymentMethod.name
+  //             : null,
+  //           deliveryMethod: order.deliveryMethod
+  //             ? order.deliveryMethod.name
+  //             : null,
+  //           paymentStatus: order.paymentStatus,
+  //           shippingCost: order.shippingCost,
+  //           deliveryStatus: order.deliveryStatus,
+  //           address: {
+  //             nameOfLocation: order.address.nameOfLocation,
+  //             location: order.address.location,
+  //             phone: order.address.phone,
+  //           },
+  //           shopInfo: filteredItems.length
+  //             ? {
+  //                 shopId: filteredItems[0].sellerId?._id || null,
+  //                 shopName: filteredItems[0].sellerId?.shopName || "Unknown",
+  //               }
+  //             : null,
+  //           items: filteredItems.map((item) => {
+  //             const product = item.productId?.toJSON();
+  //             const rates = item.productId?.rates || [];
+  //             return {
+  //               product: product
+  //                 ? {
+  //                     id: item.productId._id,
+  //                     name: product.name,
+  //                     price: product.price,
+  //                     priceAfterSale: product.priceAfterSale,
+  //                     thumbnail: product.thumbnail,
+  //                     rates: rates,
+  //                   }
+  //                 : null,
+  //               quantity: item.quantity,
+  //               SKU: item.SKU,
+  //               isRated: rates.length > 0,
+  //             };
+  //           }),
+  //         };
+  //       })
+  //       .filter((order) => order.items.length > 0); // Loại bỏ đơn hàng không có sản phẩm thỏa mãn `isRated`
+
+  //     const totalOrders = formattedOrders.length;
+  //     const totalPages = Math.ceil(totalOrders / itemsPerPage);
+
+  //     return {
+  //       status: "success",
+  //       orders: formattedOrders,
+  //       pagination: {
+  //         currentPage: page,
+  //         totalPages,
+  //         itemsPerPage,
+  //         totalOrders,
+  //       },
+  //     };
+  //   } catch (error) {
+  //     console.error("Error retrieving orders:", error.message);
+  //     return {
+  //       status: "error",
+  //       message: "Failed to retrieve orders",
+  //       error: error.message,
+  //     };
+  //   }
+  // }
+
   async getOrders(
     userId,
     page = 1,
@@ -115,12 +233,7 @@ class OrderService {
       const orders = await Order.find(filter)
         .populate({
           path: "items.productId",
-          select: "id name price priceAfterSale image rates",
-          populate: {
-            path: "rates",
-            match: { user: userId }, // Chỉ lấy đánh giá của người dùng
-            select: "star comment reply user",
-          },
+          select: "id name price priceAfterSale image",
         })
         .populate({
           path: "items.sellerId",
@@ -132,12 +245,44 @@ class OrderService {
         .skip(skip)
         .limit(itemsPerPage);
 
-      const formattedOrders = orders
-        .map((order) => {
-          const filteredItems = order.items.filter((item) => {
-            const rates = item.productId?.rates || [];
-            return isRated === undefined || isRated === rates.length > 0;
-          });
+      const formattedOrders = await Promise.all(
+        orders.map(async (order) => {
+          const filteredItems = await Promise.all(
+            order.items.map(async (item) => {
+              // Tìm đánh giá liên quan đến orderId hiện tại
+              const rates = await Rate.find({
+                user: userId,
+                product: item.productId?._id,
+                order: order._id, // Kiểm tra orderId
+              }).select("star comment reply user");
+
+              const hasRating = rates.length > 0;
+              if (isRated !== undefined && isRated !== hasRating) {
+                return null; // Loại bỏ nếu không phù hợp với `isRated`
+              }
+
+              return {
+                product: item.productId
+                  ? {
+                      id: item.productId._id,
+                      name: item.productId.name,
+                      price: item.productId.price,
+                      priceAfterSale: item.productId.priceAfterSale,
+                      thumbnail: item.productId.thumbnail,
+                      rates,
+                    }
+                  : null,
+                quantity: item.quantity,
+                SKU: item.SKU,
+                isRated: hasRating,
+                //sellerId: item.sellerId,
+              };
+            })
+          );
+
+          const validItems = filteredItems.filter((item) => item !== null);
+
+          if (!validItems.length) return null; // Bỏ qua đơn hàng không có sản phẩm hợp lệ
 
           return {
             orderId: order._id,
@@ -157,41 +302,22 @@ class OrderService {
               location: order.address.location,
               phone: order.address.phone,
             },
-            shopInfo: filteredItems.length
-              ? {
-                  shopId: filteredItems[0].sellerId?._id || null,
-                  shopName: filteredItems[0].sellerId?.shopName || "Unknown",
-                }
-              : null,
-            items: filteredItems.map((item) => {
-              const product = item.productId?.toJSON();
-              const rates = item.productId?.rates || [];
-              return {
-                product: product
-                  ? {
-                      id: item.productId._id,
-                      name: product.name,
-                      price: product.price,
-                      priceAfterSale: product.priceAfterSale,
-                      thumbnail: product.thumbnail,
-                      rates: rates,
-                    }
-                  : null,
-                quantity: item.quantity,
-                SKU: item.SKU,
-                isRated: rates.length > 0,
-              };
-            }),
+            shopInfo: {
+              shopId: order.items[0]?.sellerId?._id || null,
+              shopName: order.items[0]?.sellerId?.shopName || "Unknown",
+            },
+            items: validItems,
           };
         })
-        .filter((order) => order.items.length > 0); // Loại bỏ đơn hàng không có sản phẩm thỏa mãn `isRated`
+      );
 
-      const totalOrders = formattedOrders.length;
+      const cleanedOrders = formattedOrders.filter((order) => order !== null); // Loại bỏ đơn hàng không hợp lệ
+      const totalOrders = cleanedOrders.length;
       const totalPages = Math.ceil(totalOrders / itemsPerPage);
 
       return {
         status: "success",
-        orders: formattedOrders,
+        orders: cleanedOrders,
         pagination: {
           currentPage: page,
           totalPages,

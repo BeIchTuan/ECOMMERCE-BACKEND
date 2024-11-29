@@ -5,15 +5,17 @@ class RateController {
   async createRate(req, res) {
     try {
       const { star, comment } = req.body;
-      const userId = req.id; // Giả sử có middleware xác thực thêm ID người dùng vào yêu cầu
+      const userId = req.id; 
       const productId = req.params.productId;
+      const orderId = req.params.orderId
 
       // Gọi service để tạo đánh giá
       const rate = await RateService.createRate(
         userId,
         productId,
+        orderId,
         star,
-        comment
+        comment,
       );
       res.status(201).json({
         status: "success",

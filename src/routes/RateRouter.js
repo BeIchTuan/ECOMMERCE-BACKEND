@@ -5,7 +5,7 @@ const { authMiddleware } = require('../middlewares/authMiddleware');
 
 //For customer
 //Rate product
-router.post('/products/:productId/rate', authMiddleware(['user']), rateController.createRate)
+router.post('/products/:productId/:orderId/rate', authMiddleware(['user']), rateController.createRate)
 //update review
 router.put('/rate/:reviewId', authMiddleware(['user']), rateController.updateRate)
 //delete rate

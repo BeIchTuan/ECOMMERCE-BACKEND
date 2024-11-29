@@ -3,7 +3,7 @@ const Product = require("../models/ProductModel");
 
 class RateService {
   // Thêm đánh giá mới
-  async createRate(userId, productId, star, comment) {
+  async createRate(userId, productId, orderId, star, comment) {
     // Kiểm tra nếu sản phẩm tồn tại
     const product = await Product.findById(productId);
     if (!product) {
@@ -14,6 +14,7 @@ class RateService {
     const newRate = new Rate({
       user: userId,
       product: productId,
+      order: orderId,
       star,
       comment,
     });
