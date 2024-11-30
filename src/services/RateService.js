@@ -133,6 +133,7 @@ class RateService {
     }
 
     const product = rate.product;
+    const order = rate.order;
 
     // Kiểm tra nếu không có sản phẩm hoặc đơn hàng liên quan
     if (!product || !order) {

@@ -11,8 +11,6 @@ const rateSchema = new Schema({
     createdAt: { type: Date, default: Date.now }, // Ngày tạo đánh giá
 });
 
-// module.exports = mongoose.model('Rate', rateSchema);
-
 const Rate = mongoose.model("Rate", rateSchema);
 
 module.exports = Rate;

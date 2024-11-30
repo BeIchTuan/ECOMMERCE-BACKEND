@@ -569,8 +569,8 @@ class OrderService {
         .skip(skip)
         .sort({ createdAt: -1 })
         .limit(itemsPerPage)
-        .populate("paymentMethod", "name") // Lấy field `name` từ `PaymentMethod`
-        .populate("deliveryMethod", "name") // Lấy field `name` từ `DeliveryMethod`
+        .populate("paymentMethod", "name") 
+        .populate("deliveryMethod", "name") 
         .populate({
           path: "userId",
           select: "name avatar phone email",

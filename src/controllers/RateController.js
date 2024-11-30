@@ -30,7 +30,7 @@ class RateController {
   async deleteRate(req, res) {
     try {
       const { reviewId } = req.params;
-      const userId = req.id; // Giả sử `req.user.id` là ID người dùng đã xác thực
+      const userId = req.id;
 
       // Gọi service để xóa đánh giá
       const result = await RateService.deleteRate(reviewId, userId);
@@ -77,8 +77,8 @@ class RateController {
   async replyToRate(req, res) {
     try {
       const { reviewId } = req.params;
-      const userId = req.id; // userId của seller (giả sử bạn đã xác thực và lưu userId trong req.user)
-      const { replyContent } = req.body; // Nội dung phản hồi được gửi từ client
+      const userId = req.id;
+      const { replyContent } = req.body;
 
       await RateService.replyToRate(reviewId, userId, replyContent);
 

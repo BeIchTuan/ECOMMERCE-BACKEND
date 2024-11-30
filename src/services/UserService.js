@@ -324,6 +324,7 @@ const getCustomerOrderHistory = (page = 1, itemsPerPage = 15, userId) => {
           select: "id name price priceAfterSale image rates", // Thêm trường `rates` vào populate
           populate: {
             path: "rates",
+            match: { user: userId },
             select: "stars comment reply", // Chọn trường cần lấy từ `rates`
           },
         })
