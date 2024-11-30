@@ -227,11 +227,19 @@ const getOrderCustomerHistory = async (req, res) => {
 
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 15;
+    const deliveryStatus = req.query.deliveryStatus
+      ? req.query.deliveryStatus
+      : undefined;
+    const isRated = req.query.isRated
+      ? req.query.isRated === "true"
+      : undefined;
 
     const result = await UserService.getCustomerOrderHistory(
       page,
       limit,
-      customerId
+      customerId,
+      deliveryStatus,
+      isRated
     );
 
     res.status(200).json(result);

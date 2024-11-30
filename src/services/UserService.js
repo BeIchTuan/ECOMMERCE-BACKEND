@@ -1,5 +1,6 @@
 const User = require("../models/UserModel");
 const Order = require("../models/OrderModel");
+const Rate = require("../models/RateModel");
 const bcrypt = require("bcrypt"); // For password hashing
 const { generalAccessToken, generalRefreshToken } = require("./Jwtservice");
 const mongoose = require("mongoose");
@@ -310,88 +311,201 @@ const getCustomerInfors = async (sellerId, page = 1, itemsPerPage = 15) => {
   }
 };
 
-const getCustomerOrderHistory = (page = 1, itemsPerPage = 15, userId) => {
-  const skip = (page - 1) * itemsPerPage;
+const getCustomerOrderHistory = (page = 1, itemsPerPage = 15, userId, deliveryStatus,
+  isRated) => {
+  //const skip = (page - 1) * itemsPerPage;
 
   return new Promise(async (resolve, reject) => {
-    try {
-      // Đếm tổng số lượng đơn hàng của user
-      const totalItems = await Order.countDocuments({ userId });
+    // try {
+    //   // Đếm tổng số lượng đơn hàng của user
+    //   const totalItems = await Order.countDocuments({ userId });
 
-      const orders = await Order.find({ userId })
+    //   const orders = await Order.find({ userId })
+    //     .populate({
+    //       path: "items.productId",
+    //       select: "id name price priceAfterSale image rates", // Thêm trường `rates` vào populate
+    //       populate: {
+    //         path: "rates",
+    //         match: { user: userId },
+    //         select: "stars comment reply", // Chọn trường cần lấy từ `rates`
+    //       },
+    //     })
+    //     .populate({
+    //       path: "items.sellerId",
+    //       select: "shopName", // Chỉ chọn trường shopName
+    //     })
+    //     .populate("paymentMethod", "name") // Populate `name` field from `PaymentMethod` collection
+    //     .populate("deliveryMethod", "name") // Populate `name` field from `DeliveryMethod` collection
+    //     .sort({ createdAt: -1 })
+    //     .skip(skip)
+    //     .limit(itemsPerPage);
+
+    //   const formattedOrders = orders.map((order) => ({
+    //     orderId: order._id,
+    //     orderDate: order.createdAt,
+    //     totalPrice: order.totalPrice,
+    //     paymentMethod: order.paymentMethod ? order.paymentMethod.name : null, // Access `name` if `paymentMethod` is populated
+    //     deliveryMethod: order.deliveryMethod ? order.deliveryMethod.name : null, // Access `name` if `deliveryMethod` is populated
+    //     paymentStatus: order.paymentStatus,
+    //     shippingCost: order.shippingCost,
+    //     deliveryStatus: order.deliveryStatus,
+    //     address: {
+    //       nameOfLocation: order.address.nameOfLocation,
+    //       location: order.address.location,
+    //       phone: order.address.phone,
+    //     },
+    //     items: order.items.map((item) => {
+    //       const product = item.productId?.toJSON(); // Convert to JSON to include virtuals
+    //       return {
+    //         product: product
+    //           ? {
+    //               id: item.productId._id,
+    //               name: product.name,
+    //               price: product.price,
+    //               priceAfterSale: product.priceAfterSale,
+    //               thumbnail: product.thumbnail, // Assuming thumbnail is a virtual field
+    //               rates:
+    //                 item.productId.rates?.map((rate) => ({
+    //                   id: rate._id,
+    //                   stars: rate.stars,
+    //                   comment: rate.comment,
+    //                   reply: rate.reply,
+    //                 })) || [],
+    //             }
+    //           : null,
+    //         quantity: item.quantity,
+    //         SKU: item.SKU,
+    //       };
+    //     }),
+    //   }));
+
+    //   // Tính toán tổng số trang
+    //   const totalPages = Math.ceil(totalItems / itemsPerPage);
+
+    //   resolve({
+    //     status: "success",
+    //     orderHistory: formattedOrders,
+    //     pagination: {
+    //       currentPage: page,
+    //       totalPages,
+    //       itemsPerPage,
+    //       totalItems,
+    //     },
+    //   });
+    // } catch (error) {
+    //   reject(error);
+    // }
+    try {
+      const skip = (page - 1) * itemsPerPage;
+
+      // Tạo bộ lọc cơ bản
+      const filter = { userId: userId };
+      if (deliveryStatus) {
+        filter.deliveryStatus = deliveryStatus;
+      }
+
+      const orders = await Order.find(filter)
         .populate({
           path: "items.productId",
-          select: "id name price priceAfterSale image rates", // Thêm trường `rates` vào populate
-          populate: {
-            path: "rates",
-            match: { user: userId },
-            select: "stars comment reply", // Chọn trường cần lấy từ `rates`
-          },
+          select: "id name price priceAfterSale image",
         })
         .populate({
           path: "items.sellerId",
-          select: "shopName", // Chỉ chọn trường shopName
+          select: "shopName",
         })
-        .populate("paymentMethod", "name") // Populate `name` field from `PaymentMethod` collection
-        .populate("deliveryMethod", "name") // Populate `name` field from `DeliveryMethod` collection
+        .populate("paymentMethod", "name")
+        .populate("deliveryMethod", "name")
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(itemsPerPage);
 
-      const formattedOrders = orders.map((order) => ({
-        orderId: order._id,
-        orderDate: order.createdAt,
-        totalPrice: order.totalPrice,
-        paymentMethod: order.paymentMethod ? order.paymentMethod.name : null, // Access `name` if `paymentMethod` is populated
-        deliveryMethod: order.deliveryMethod ? order.deliveryMethod.name : null, // Access `name` if `deliveryMethod` is populated
-        paymentStatus: order.paymentStatus,
-        shippingCost: order.shippingCost,
-        deliveryStatus: order.deliveryStatus,
-        address: {
-          nameOfLocation: order.address.nameOfLocation,
-          location: order.address.location,
-          phone: order.address.phone,
-        },
-        items: order.items.map((item) => {
-          const product = item.productId?.toJSON(); // Convert to JSON to include virtuals
-          return {
-            product: product
-              ? {
-                  id: item.productId._id,
-                  name: product.name,
-                  price: product.price,
-                  priceAfterSale: product.priceAfterSale,
-                  thumbnail: product.thumbnail, // Assuming thumbnail is a virtual field
-                  rates:
-                    item.productId.rates?.map((rate) => ({
-                      id: rate._id,
-                      stars: rate.stars,
-                      comment: rate.comment,
-                      reply: rate.reply,
-                    })) || [],
-                }
-              : null,
-            quantity: item.quantity,
-            SKU: item.SKU,
-          };
-        }),
-      }));
+      const formattedOrders = await Promise.all(
+        orders.map(async (order) => {
+          const filteredItems = await Promise.all(
+            order.items.map(async (item) => {
+              // Tìm đánh giá liên quan đến orderId hiện tại
+              const rates = await Rate.find({
+                user: userId,
+                product: item.productId?._id,
+                order: order._id, // Kiểm tra orderId
+              }).select("star comment reply user");
 
-      // Tính toán tổng số trang
-      const totalPages = Math.ceil(totalItems / itemsPerPage);
+              const hasRating = rates.length > 0;
+              if (isRated !== undefined && isRated !== hasRating) {
+                return null; // Loại bỏ nếu không phù hợp với `isRated`
+              }
+
+              return {
+                product: item.productId
+                  ? {
+                      id: item.productId._id,
+                      name: item.productId.name,
+                      price: item.productId.price,
+                      priceAfterSale: item.productId.priceAfterSale,
+                      thumbnail: item.productId.thumbnail,
+                      rates,
+                    }
+                  : null,
+                quantity: item.quantity,
+                SKU: item.SKU,
+                isRated: hasRating,
+                //sellerId: item.sellerId,
+              };
+            })
+          );
+
+          const validItems = filteredItems.filter((item) => item !== null);
+
+          if (!validItems.length) return null; // Bỏ qua đơn hàng không có sản phẩm hợp lệ
+
+          return {
+            orderId: order._id,
+            orderDate: order.createdAt,
+            totalPrice: order.totalPrice,
+            paymentMethod: order.paymentMethod
+              ? order.paymentMethod.name
+              : null,
+            deliveryMethod: order.deliveryMethod
+              ? order.deliveryMethod.name
+              : null,
+            paymentStatus: order.paymentStatus,
+            shippingCost: order.shippingCost,
+            deliveryStatus: order.deliveryStatus,
+            address: {
+              nameOfLocation: order.address.nameOfLocation,
+              location: order.address.location,
+              phone: order.address.phone,
+            },
+            shopInfo: {
+              shopId: order.items[0]?.sellerId?._id || null,
+              shopName: order.items[0]?.sellerId?.shopName || "Unknown",
+            },
+            items: validItems,
+          };
+        })
+      );
+
+      const cleanedOrders = formattedOrders.filter((order) => order !== null); // Loại bỏ đơn hàng không hợp lệ
+      const totalOrders = cleanedOrders.length;
+      const totalPages = Math.ceil(totalOrders / itemsPerPage);
 
       resolve({
         status: "success",
-        orderHistory: formattedOrders,
+        orders: cleanedOrders,
         pagination: {
           currentPage: page,
           totalPages,
           itemsPerPage,
-          totalItems,
+          totalOrders,
         },
       });
     } catch (error) {
-      reject(error);
+      console.error("Error retrieving orders:", error.message);
+      reject({
+        status: "error",
+        message: "Failed to retrieve orders",
+        error: error.message,
+      });
     }
   });
 };
