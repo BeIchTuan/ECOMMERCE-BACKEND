@@ -311,8 +311,13 @@ const getCustomerInfors = async (sellerId, page = 1, itemsPerPage = 15) => {
   }
 };
 
-const getCustomerOrderHistory = (page = 1, itemsPerPage = 15, userId, deliveryStatus,
-  isRated) => {
+const getCustomerOrderHistory = (
+  page = 1,
+  itemsPerPage = 15,
+  userId,
+  deliveryStatus,
+  isRated
+) => {
   //const skip = (page - 1) * itemsPerPage;
 
   return new Promise(async (resolve, reject) => {
@@ -403,6 +408,7 @@ const getCustomerOrderHistory = (page = 1, itemsPerPage = 15, userId, deliverySt
       if (deliveryStatus) {
         filter.deliveryStatus = deliveryStatus;
       }
+      const totalOrders = await Order.countDocuments(filter);
 
       const orders = await Order.find(filter)
         .populate({
@@ -486,7 +492,6 @@ const getCustomerOrderHistory = (page = 1, itemsPerPage = 15, userId, deliverySt
       );
 
       const cleanedOrders = formattedOrders.filter((order) => order !== null); // Loại bỏ đơn hàng không hợp lệ
-      const totalOrders = cleanedOrders.length;
       const totalPages = Math.ceil(totalOrders / itemsPerPage);
 
       resolve({

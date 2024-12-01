@@ -21,6 +21,9 @@ class OrderService {
         filter.deliveryStatus = deliveryStatus;
       }
 
+      // Lấy tổng số đơn hàng từ cơ sở dữ liệu
+      const totalOrders = await Order.countDocuments(filter);
+
       const orders = await Order.find(filter)
         .populate({
           path: "items.productId",
@@ -103,7 +106,6 @@ class OrderService {
       );
 
       const cleanedOrders = formattedOrders.filter((order) => order !== null); // Loại bỏ đơn hàng không hợp lệ
-      const totalOrders = cleanedOrders.length;
       const totalPages = Math.ceil(totalOrders / itemsPerPage);
 
       return {
@@ -360,8 +362,8 @@ class OrderService {
         .skip(skip)
         .sort({ createdAt: -1 })
         .limit(itemsPerPage)
-        .populate("paymentMethod", "name") 
-        .populate("deliveryMethod", "name") 
+        .populate("paymentMethod", "name")
+        .populate("deliveryMethod", "name")
         .populate({
           path: "userId",
           select: "name avatar phone email",
