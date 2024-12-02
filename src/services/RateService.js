@@ -1,5 +1,6 @@
 const Rate = require("../models/RateModel");
 const Product = require("../models/ProductModel");
+const Order = require("../models/OrderModel")
 
 class RateService {
   // Thêm đánh giá mới
@@ -194,6 +195,65 @@ class RateService {
 
     return rate;
   }
+
+  async getReviews(sellerId, page, limit) {
+    const skip = (page - 1) * limit;
+  
+    // Lọc các đánh giá theo sellerId
+    const reviews = await Rate.find()
+      .populate("user", "_id name avatar")
+      .populate({
+        path: "order",
+        select: "items",
+        populate: {
+          path: "items.productId",
+          select: "_id name priceAfterSale image",
+        },
+      })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+  
+    // Lọc các đánh giá chỉ liên quan đến sellerId
+    const filteredReviews = reviews.filter((review) =>
+      review.order?.items.some(
+        (item) => item.sellerId?.toString() === sellerId.toString()
+      )
+    );
+  
+    const totalItems = filteredReviews.length;
+    const totalPages = Math.ceil(totalItems / limit);
+  
+    return {
+      pagination: {
+        currentPage: page,
+        totalPages,
+        itemsPerPage: limit,
+        totalItems,
+      },
+      reviews: filteredReviews.map((review) => {
+        const orderItem = review.order.items.find(
+          (item) => item.sellerId?.toString() === sellerId.toString()
+        );
+  
+        return {
+          id: review._id,
+          stars: review.star,
+          comment: review.comment,
+          reply: review.reply,
+          user: review.user,
+          product: {
+            id: orderItem?.productId?._id,
+            name: orderItem?.productId?.name,
+            priceAfterSale: orderItem?.productId?.priceAfterSale,
+            thumbnail: orderItem?.productId?.thumbnail,
+            sku: orderItem?.SKU,
+          },
+        };
+      }),
+    };
+  }
+  
 }
 
 module.exports = new RateService();

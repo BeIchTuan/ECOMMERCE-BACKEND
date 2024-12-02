@@ -12,7 +12,7 @@ router.put('/rate/:reviewId', authMiddleware(['user']), rateController.updateRat
 router.delete('/rate/:reviewId', authMiddleware(['user']), rateController.deleteRate)
 
 //For seller
-//Get all reviews
+//Get all reviews for a products
 router.get('/products/:productId/rate', authMiddleware(['seller']), rateController.getRatesByProduct)
 //Delete reviews
 router.delete('/seller/reviews/:reviewId', authMiddleware(['seller']), rateController.deleteComment)
@@ -20,5 +20,7 @@ router.delete('/seller/reviews/:reviewId', authMiddleware(['seller']), rateContr
 router.post('/seller/reviews/:reviewId/reply', authMiddleware(['seller']), rateController.replyToRate)
 //update reply
 router.put('/seller/reviews/:reviewId/reply', authMiddleware(['seller']), rateController.updateReply)
+//get reviews from customers
+router.get('/seller/reviews', authMiddleware(['seller']), rateController.getReviews)
 
 module.exports = router

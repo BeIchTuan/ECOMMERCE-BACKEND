@@ -5,9 +5,9 @@ class RateController {
   async createRate(req, res) {
     try {
       const { star, comment } = req.body;
-      const userId = req.id; 
+      const userId = req.id;
       const productId = req.params.productId;
-      const orderId = req.params.orderId
+      const orderId = req.params.orderId;
 
       // Gọi service để tạo đánh giá
       const rate = await RateService.createRate(
@@ -15,12 +15,12 @@ class RateController {
         productId,
         orderId,
         star,
-        comment,
+        comment
       );
       res.status(201).json({
         status: "success",
         message: "Review submitted successfully",
-        rate
+        rate,
       });
     } catch (error) {
       res.status(400).json({ error: error.message });
@@ -138,6 +138,25 @@ class RateController {
       res.status(400).json({
         status: "error",
         message: error.message,
+      });
+    }
+  }
+
+  async getReviews(req, res) {
+    try {
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 15;
+      const sellerId = req.id;
+      const reviews = await RateService.getReviews(sellerId, page, limit);
+
+      res.status(200).json({
+        status: "success",
+        ...reviews,
+      });
+    } catch (error) {
+      res.status(500).json({
+        status: "error",
+        message: "Failed to fetch reviews: " + error.message,
       });
     }
   }
