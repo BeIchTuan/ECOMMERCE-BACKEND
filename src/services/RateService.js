@@ -1,6 +1,6 @@
 const Rate = require("../models/RateModel");
 const Product = require("../models/ProductModel");
-const Order = require("../models/OrderModel")
+const Order = require("../models/OrderModel");
 
 class RateService {
   // Thêm đánh giá mới
@@ -196,9 +196,19 @@ class RateService {
     return rate;
   }
 
-  async getReviews(sellerId, page, limit) {
-    const skip = (page - 1) * limit;
+  async getReviews(sellerId, page, itemsPerPage) {
+    const skip = (page - 1) * itemsPerPage;
+
+    const sellerOrders = await Order.find({
+      "items.sellerId": sellerId,
+    }).select("_id");
   
+    const sellerOrderIds = sellerOrders.map((order) => order._id);
+  
+    const totalItems = await Rate.countDocuments({
+      order: { $in: sellerOrderIds },
+    });
+
     // Lọc các đánh giá theo sellerId
     const reviews = await Rate.find()
       .populate("user", "_id name avatar")
@@ -212,32 +222,31 @@ class RateService {
       })
       .sort({ createdAt: -1 })
       .skip(skip)
-      .limit(limit);
-  
+      .limit(itemsPerPage);
+
     // Lọc các đánh giá chỉ liên quan đến sellerId
     const filteredReviews = reviews.filter((review) =>
       review.order?.items.some(
         (item) => item.sellerId?.toString() === sellerId.toString()
       )
     );
-  
-    const totalItems = filteredReviews.length;
-    const totalPages = Math.ceil(totalItems / limit);
-  
+
+    const totalPages = Math.ceil(totalItems / itemsPerPage);
+
     return {
       pagination: {
         currentPage: page,
         totalPages,
-        itemsPerPage: limit,
+        itemsPerPage: itemsPerPage,
         totalItems,
       },
       reviews: filteredReviews.map((review) => {
         const orderItem = review.order.items.find(
           (item) => item.sellerId?.toString() === sellerId.toString()
         );
-  
+
         return {
-          id: review._id,
+          _id: review._id,
           stars: review.star,
           comment: review.comment,
           reply: review.reply,
@@ -247,13 +256,12 @@ class RateService {
             name: orderItem?.productId?.name,
             priceAfterSale: orderItem?.productId?.priceAfterSale,
             thumbnail: orderItem?.productId?.thumbnail,
-            sku: orderItem?.SKU,
+            SKU: orderItem?.SKU,
           },
         };
       }),
     };
   }
-  
 }
 
 module.exports = new RateService();
