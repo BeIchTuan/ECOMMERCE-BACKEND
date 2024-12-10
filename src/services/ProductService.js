@@ -282,24 +282,82 @@ class ProductService {
     try {
       const skip = (page - 1) * itemsPerPage;
 
-      // Fetch products from the database without any filtering
-      const products = await Product.find()
-        .skip(skip)
-        .limit(itemsPerPage)
-        .populate("seller", "shopName"); // .populate('product', 'name'); // Populate with product name
+      const user = userId
+        ? await User.findById(userId)
+            .select("favoriteProducts cart orders")
+            .populate({
+              path: "cart", // Nếu cart là tham chiếu
+              populate: { path: "productId", select: "name price" }, // Populate sản phẩm
+            })
+        : null;
 
-      const user = await User.findById(userId).select("favoriteProducts");
-
-      const favoriteProductIds = user
+      const favoriteProductIds = Array.isArray(user?.favoriteProducts)
         ? user.favoriteProducts.map((prod) => prod.toString())
         : [];
+      const cartProductIds = Array.isArray(user?.cart)
+        ? user.cart.map((item) => item.productId.toString())
+        : [];
+      const orderProductIds = Array.isArray(user?.orders)
+        ? user.orders.flatMap((order) =>
+            order.items.map((item) => item.productId.toString())
+          )
+        : [];
 
-      // Count total products to calculate total pages
-      const totalItems = await Product.countDocuments();
+      // Fetch recommended products
+      let recommendedProducts = [];
+
+      if (
+        !user ||
+        (!favoriteProductIds.length &&
+          !cartProductIds.length &&
+          !orderProductIds.length)
+      ) {
+        // Best-seller products
+        recommendedProducts = await Product.find()
+          .sort({ salesCount: -1 })
+          .populate("seller", "shopName");
+      } else {
+        const similarCategoryIds = await Product.distinct("category", {
+          _id: {
+            $in: [...favoriteProductIds, ...cartProductIds, ...orderProductIds],
+          },
+        });
+
+        recommendedProducts = await Product.find({
+          _id: {
+            $nin: [
+              ...favoriteProductIds,
+              ...cartProductIds,
+              ...orderProductIds,
+            ],
+          },
+          category: { $in: similarCategoryIds },
+        })
+          .sort({ salesCount: -1 })
+          .populate("seller", "shopName");
+      }
+
+      // Exclude recommended product IDs to get remaining products
+      const recommendedProductIds = recommendedProducts.map((prod) =>
+        prod._id.toString()
+      );
+      const remainingProducts = await Product.find({
+        _id: { $nin: recommendedProductIds },
+      })
+        .sort({ createdAt: -1 }) // Optional: sort remaining products by newest
+        .populate("seller", "shopName");
+
+      // Merge recommended and remaining products
+      const mergedProducts = [...recommendedProducts, ...remainingProducts];
+
+      // Paginate merged products
+      const totalItems = mergedProducts.length;
       const totalPages = Math.ceil(totalItems / itemsPerPage);
+      const paginatedProducts = mergedProducts.slice(skip, skip + itemsPerPage);
 
-      const formattedProducts = products.map((product) => {
-        const productObj = product.toObject(); // Chuyển product thành đối tượng JavaScript thuần
+      // Format products
+      const formattedProducts = paginatedProducts.map((product) => {
+        const productObj = product.toObject();
         const shopInfor = product.seller
           ? {
               shopId: product.seller._id,
@@ -307,11 +365,28 @@ class ProductService {
             }
           : null;
 
-        const isFavorite = favoriteProductIds.includes(product._id.toString()); // Kiểm tra sản phẩm có trong danh sách yêu thích không
-
-        delete productObj.seller; // Xóa trường seller khỏi product
-
-        return { ...productObj, shopInfor, isFavorite }; // Thêm shopInfo và isFavourite vào phản hồi
+        return {
+          _id: productObj._id,
+          name: productObj.name,
+          description: productObj.description,
+          SKU: productObj.SKU,
+          price: productObj.price,
+          category: productObj.category,
+          inStock: productObj.inStock,
+          image: productObj.image,
+          rates: productObj.rates,
+          sold: productObj.sold,
+          averageStar: productObj.averageStar,
+          rateCount: productObj.rateCount,
+          priceAfterSale: productObj.priceAfterSale,
+          __v: productObj.__v,
+          salePercent: productObj.salePercent,
+          isDeleted: productObj.isDeleted,
+          thumbnail: productObj.thumbnail,
+          id: productObj._id,
+          shopInfor,
+          isFavorite: favoriteProductIds.includes(productObj._id.toString()),
+        };
       });
 
       return {
