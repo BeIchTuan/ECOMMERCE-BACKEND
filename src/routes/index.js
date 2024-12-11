@@ -6,6 +6,7 @@ const OrderRouter = require('./OrderRouter')
 const ConversationRouter = require("./ConversationRouter")
 const RateRouter = require('./RateRouter')
 const DiscountRouter = require('./DiscountRouter')
+const RevenueRouter = require('./RevenueRouter')
 
 const routes = (app) => {
     app.use('/', UserRouter)
@@ -16,6 +17,7 @@ const routes = (app) => {
     app.use('/', ConversationRouter)
     app.use('/', RateRouter)
     app.use('/', DiscountRouter)
+    app.use('/', RevenueRouter)
 }
 
 module.exports = routes
