@@ -1,4 +1,4 @@
-const OrderModel = require("../models/OrderModel");
+const Order = require("../models/OrderModel");
 const {
   parseISO,
   format,
@@ -12,14 +12,15 @@ const {
   addYears,
   isBefore,
   isAfter,
+  isValid
 } = require("date-fns");
 
 class RevenueService {
   // Xem báo cáo doanh thu
   async getRevenueReport(sellerId) {
-    const orders = await OrderModel.find({ "items.sellerId": sellerId });
+    const orders = await Order.find({ "items.sellerId": sellerId });
     const totalRevenue = orders.reduce(
-      (sum, order) => sum + order.totalPrice,
+      (sum, order) => sum + (order.totalPrice - order.shippingCost),
       0
     );
     const totalOrders = orders.length;
@@ -34,11 +35,17 @@ class RevenueService {
 
   // Xem báo cáo doanh thu theo thời gian
   async getRevenueChart(sellerId, startDate, endDate, interval = "day") {
+    console.log(sellerId)
     const start = startDate ? parseISO(startDate) : addMonths(new Date(), -1);
     const end = endDate ? parseISO(endDate) : new Date();
 
+    // Nếu ngày không hợp lệ, ném lỗi
+    if (!isValid(start) || !isValid(end)) {
+      throw new Error("Invalid startDate or endDate");
+    }
+
     // Fetch orders in the date range
-    const orders = await OrderModel.find({
+    const orders = await Order.find({
       "items.sellerId": sellerId,
       createdAt: { $gte: start, $lte: end },
     });
@@ -66,7 +73,7 @@ class RevenueService {
       if (!groupedData[dateKey]) {
         groupedData[dateKey] = { revenue: 0, orders: 0, customers: new Set() };
       }
-      groupedData[dateKey].revenue += order.totalPrice;
+      groupedData[dateKey].revenue += order.totalPrice - order.shippingCost;
       groupedData[dateKey].orders += 1;
       groupedData[dateKey].customers.add(order.userId.toString());
     });
