@@ -199,18 +199,22 @@ class RateService {
   async getReviews(sellerId, page, itemsPerPage) {
     const skip = (page - 1) * itemsPerPage;
 
+    // Lấy danh sách các đơn hàng liên quan đến sellerId
     const sellerOrders = await Order.find({
       "items.sellerId": sellerId,
     }).select("_id");
-  
+
     const sellerOrderIds = sellerOrders.map((order) => order._id);
-  
+
+    // Đếm tổng số review liên quan đến sellerId
     const totalItems = await Rate.countDocuments({
       order: { $in: sellerOrderIds },
     });
 
-    // Lọc các đánh giá theo sellerId
-    const reviews = await Rate.find()
+    // Lấy các review liên quan đến sellerId
+    const reviews = await Rate.find({
+      order: { $in: sellerOrderIds },
+    })
       .populate("user", "_id name avatar")
       .populate({
         path: "order",
@@ -220,19 +224,28 @@ class RateService {
           select: "_id name priceAfterSale image",
         },
       })
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(itemsPerPage);
+      .sort({ createdAt: -1 }); // Sắp xếp theo thời gian mới nhất
 
-    // Lọc các đánh giá chỉ liên quan đến sellerId
+    // Lọc và ưu tiên các review chưa có reply lên trước
     const filteredReviews = reviews.filter((review) =>
       review.order?.items.some(
         (item) => item.sellerId?.toString() === sellerId.toString()
       )
     );
 
+    // Phân loại: reviews chưa có reply trước, rồi đến reviews có reply
+    const sortedReviews = [
+      ...filteredReviews.filter((review) => !review.reply), // Chưa có reply
+      ...filteredReviews.filter((review) => review.reply), // Đã có reply
+    ];
+
+    // Phân trang
+    const paginatedReviews = sortedReviews.slice(skip, skip + itemsPerPage);
+
+    // Tính tổng số trang
     const totalPages = Math.ceil(totalItems / itemsPerPage);
 
+    // Chuẩn bị dữ liệu trả về
     return {
       pagination: {
         currentPage: page,
@@ -240,7 +253,7 @@ class RateService {
         itemsPerPage: itemsPerPage,
         totalItems,
       },
-      reviews: filteredReviews.map((review) => {
+      reviews: paginatedReviews.map((review) => {
         const orderItem = review.order.items.find(
           (item) => item.sellerId?.toString() === sellerId.toString()
         );
