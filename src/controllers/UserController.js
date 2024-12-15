@@ -224,6 +224,7 @@ const getCustomerInfors = async (req, res) => {
 const getOrderCustomerHistory = async (req, res) => {
   try {
     const customerId = req.params.customerId; // Assuming the user ID is provided as a URL parameter
+    const sellerId = req.id;
 
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 15;
@@ -239,7 +240,8 @@ const getOrderCustomerHistory = async (req, res) => {
       limit,
       customerId,
       deliveryStatus,
-      isRated
+      isRated,
+      sellerId
     );
 
     res.status(200).json(result);

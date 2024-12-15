@@ -316,95 +316,19 @@ const getCustomerOrderHistory = (
   itemsPerPage = 15,
   userId,
   deliveryStatus,
-  isRated
+  isRated,
+  sellerId
 ) => {
-  //const skip = (page - 1) * itemsPerPage;
-
   return new Promise(async (resolve, reject) => {
-    // try {
-    //   // Đếm tổng số lượng đơn hàng của user
-    //   const totalItems = await Order.countDocuments({ userId });
-
-    //   const orders = await Order.find({ userId })
-    //     .populate({
-    //       path: "items.productId",
-    //       select: "id name price priceAfterSale image rates", // Thêm trường `rates` vào populate
-    //       populate: {
-    //         path: "rates",
-    //         match: { user: userId },
-    //         select: "stars comment reply", // Chọn trường cần lấy từ `rates`
-    //       },
-    //     })
-    //     .populate({
-    //       path: "items.sellerId",
-    //       select: "shopName", // Chỉ chọn trường shopName
-    //     })
-    //     .populate("paymentMethod", "name") // Populate `name` field from `PaymentMethod` collection
-    //     .populate("deliveryMethod", "name") // Populate `name` field from `DeliveryMethod` collection
-    //     .sort({ createdAt: -1 })
-    //     .skip(skip)
-    //     .limit(itemsPerPage);
-
-    //   const formattedOrders = orders.map((order) => ({
-    //     orderId: order._id,
-    //     orderDate: order.createdAt,
-    //     totalPrice: order.totalPrice,
-    //     paymentMethod: order.paymentMethod ? order.paymentMethod.name : null, // Access `name` if `paymentMethod` is populated
-    //     deliveryMethod: order.deliveryMethod ? order.deliveryMethod.name : null, // Access `name` if `deliveryMethod` is populated
-    //     paymentStatus: order.paymentStatus,
-    //     shippingCost: order.shippingCost,
-    //     deliveryStatus: order.deliveryStatus,
-    //     address: {
-    //       nameOfLocation: order.address.nameOfLocation,
-    //       location: order.address.location,
-    //       phone: order.address.phone,
-    //     },
-    //     items: order.items.map((item) => {
-    //       const product = item.productId?.toJSON(); // Convert to JSON to include virtuals
-    //       return {
-    //         product: product
-    //           ? {
-    //               id: item.productId._id,
-    //               name: product.name,
-    //               price: product.price,
-    //               priceAfterSale: product.priceAfterSale,
-    //               thumbnail: product.thumbnail, // Assuming thumbnail is a virtual field
-    //               rates:
-    //                 item.productId.rates?.map((rate) => ({
-    //                   id: rate._id,
-    //                   stars: rate.stars,
-    //                   comment: rate.comment,
-    //                   reply: rate.reply,
-    //                 })) || [],
-    //             }
-    //           : null,
-    //         quantity: item.quantity,
-    //         SKU: item.SKU,
-    //       };
-    //     }),
-    //   }));
-
-    //   // Tính toán tổng số trang
-    //   const totalPages = Math.ceil(totalItems / itemsPerPage);
-
-    //   resolve({
-    //     status: "success",
-    //     orderHistory: formattedOrders,
-    //     pagination: {
-    //       currentPage: page,
-    //       totalPages,
-    //       itemsPerPage,
-    //       totalItems,
-    //     },
-    //   });
-    // } catch (error) {
-    //   reject(error);
-    // }
     try {
       const skip = (page - 1) * itemsPerPage;
 
-      // Tạo bộ lọc cơ bản
-      const filter = { userId: userId };
+      const filter = { userId: userId};
+
+      if (sellerId) {
+        filter["items"] = { $elemMatch: { sellerId: sellerId } };
+      }
+
       if (deliveryStatus) {
         filter.deliveryStatus = deliveryStatus;
       }
