@@ -2,7 +2,8 @@ const Order = require("../models/OrderModel");
 const Product = require("../models/ProductModel");
 const Discount = require("../models/DiscountModel");
 const Rate = require("../models/RateModel");
-const mongoose = require("mongoose");
+const User = require("../models/UserModel");
+const { sendOrderConfirmationEmail } = require("./EmailService");
 
 class OrderService {
   async getOrders(
@@ -228,7 +229,7 @@ class OrderService {
       }
 
       const populatedOrder = await Order.findById(savedOrder._id)
-        .populate("paymentMethod", "name") // Assuming `name` field exists
+        .populate("paymentMethod", "name") 
         .populate("deliveryMethod", "name");
 
       const responseItems = await Promise.all(
@@ -247,7 +248,7 @@ class OrderService {
         })
       );
 
-      return {
+      const orderResponse = {
         orderId: savedOrder._id,
         orderDate: savedOrder.createdAt,
         totalPrice: savedOrder.totalPrice,
@@ -259,6 +260,28 @@ class OrderService {
         address: savedOrder.address,
         items: responseItems,
       };
+  
+      // Lấy email khách hàng từ database
+      const customer = await User.findById(userId).select("email");
+      if (!customer) throw new Error("Customer not found");
+  
+      // Gửi email xác nhận
+      await sendOrderConfirmationEmail( orderResponse, customer.email);
+  
+      return orderResponse;
+
+      // return {
+      //   orderId: savedOrder._id,
+      //   orderDate: savedOrder.createdAt,
+      //   totalPrice: savedOrder.totalPrice,
+      //   paymentMethod: populatedOrder.paymentMethod.name,
+      //   deliveryMethod: populatedOrder.deliveryMethod.name,
+      //   shippingCost: savedOrder.shippingCost,
+      //   deliveryStatus: savedOrder.deliveryStatus,
+      //   paymentStatus: savedOrder.paymentStatus,
+      //   address: savedOrder.address,
+      //   items: responseItems,
+      // };
     } catch (error) {
       return {
         status: 500,
