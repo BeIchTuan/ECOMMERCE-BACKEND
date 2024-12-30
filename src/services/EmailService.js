@@ -13,7 +13,7 @@ const sendOrderConfirmationEmail = async (orderDetails, customerEmail) => {
       },
     });
 
-    const emailHTML = await generateOrderEmailHTML(orderDetails); // Đảm bảo gọi await
+    const emailHTML = await generateOrderEmailHTML(orderDetails);
 
     const mailOptions = {
       from: {
@@ -72,10 +72,16 @@ async function generateOrderEmailHTML(order) {
     .join("");
 
   return `
-    <div style="font-family: Arial, sans-serif; color: #333; max-width: 800px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px; background-color: #f9f9f9;">
-      <h2 style="color: #4CAF50; border-bottom: 2px solid #4CAF50; padding-bottom: 10px; text-align: center;">Order Confirmation</h2>
-      
-      <div style="margin-bottom: 20px;">
+    <div style="font-family: Arial, sans-serif; color: #333; max-width: 800px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px; background-color: #ffffff;">
+      <!-- Header -->
+      <div style="text-align: center; padding-bottom: 20px; border-bottom: 2px solid #4CAF50;">
+        <h1 style="color: #4CAF50; font-size: 24px; margin-bottom: 5px;">Order Confirmation</h1>
+        <p style="font-size: 14px; color: #777;">Thank you for shopping with us!</p>
+      </div>
+
+      <!-- Order Details -->
+      <div style="margin-top: 20px; padding-bottom: 20px; border-bottom: 1px solid #ddd;">
+        <h2 style="font-size: 18px; color: #333; border-bottom: 2px solid #4CAF50; padding-bottom: 8px; margin-bottom: 15px;">Order Details</h2>
         <p><strong>Order ID:</strong> ${order.orderId}</p>
         <p><strong>Order Date:</strong> ${new Date(
           order.orderDate
@@ -91,30 +97,39 @@ async function generateOrderEmailHTML(order) {
           order.paymentStatus === "paid" ? "#4CAF50" : "#FF5722"
         };">${order.paymentStatus}</span></p>
       </div>
-      
-      <h3 style="color: #4CAF50; border-bottom: 2px solid #4CAF50; padding-bottom: 10px;">Shipping Address</h3>
-      <div style="margin-bottom: 20px;">
+
+      <!-- Shipping Address -->
+      <div style="margin-top: 20px; padding-bottom: 20px; border-bottom: 1px solid #ddd;">
+        <h2 style="font-size: 18px; color: #333; border-bottom: 2px solid #4CAF50; padding-bottom: 8px; margin-bottom: 15px;">Shipping Address</h2>
         <p><strong>Location Name:</strong> ${order.address.nameOfLocation}</p>
         <p><strong>Address:</strong> ${order.address.location}</p>
         <p><strong>Phone:</strong> ${order.address.phone}</p>
       </div>
-  
-      <h3 style="color: #4CAF50; border-bottom: 2px solid #4CAF50; padding-bottom: 10px;">Order Items</h3>
-      <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px; background-color: #fff;">
-        <thead>
-            <tr style="background-color: #f2f2f2; text-align: center; border-bottom: 2px solid #ddd;">
-            <th style="padding: 10px; border: 1px solid #ddd;">STT</th>
-            <th style="padding: 10px; border: 1px solid #ddd;">Product Name</th>
-            <th style="padding: 10px; border: 1px solid #ddd;">SKU</th>
-            <th style="padding: 10px; border: 1px solid #ddd;">Quantity</th>
-            <th style="padding: 10px; border: 1px solid #ddd;">Price</th>
+
+      <!-- Order Items -->
+      <div style="margin-top: 20px;">
+        <h2 style="font-size: 18px; color: #333; border-bottom: 2px solid #4CAF50; padding-bottom: 8px; margin-bottom: 15px;">Order Items</h2>
+        <table style="width: 100%; border-collapse: collapse; background-color: #f9f9f9; margin-bottom: 20px;">
+          <thead>
+            <tr style="background-color: #4CAF50; color: #fff; text-align: center;">
+              <th style="padding: 10px; border: 1px solid #ddd;">STT</th>
+              <th style="padding: 10px; border: 1px solid #ddd;">Product Name</th>
+              <th style="padding: 10px; border: 1px solid #ddd;">SKU</th>
+              <th style="padding: 10px; border: 1px solid #ddd;">Quantity</th>
+              <th style="padding: 10px; border: 1px solid #ddd;">Price</th>
             </tr>
-        </thead>
-        <tbody>
+          </thead>
+          <tbody>
             ${itemsHTML}
-        </tbody>
-    </table>
-      <p style="text-align: center; font-size: 14px; color: #888;">Thank you for shopping with us!</p>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Footer -->
+      <div style="text-align: center; padding-top: 20px; border-top: 2px solid #ddd; margin-top: 20px;">
+        <p style="font-size: 14px; color: #777;">If you have any questions about your order, feel free to <a href="mailto:support@yourstore.com" style="color: #4CAF50; text-decoration: none;">contact us</a>.</p>
+        <p style="font-size: 12px; color: #aaa;">&copy; 2024 Your Store. All rights reserved.</p>
+      </div>
     </div>
   `;
 }

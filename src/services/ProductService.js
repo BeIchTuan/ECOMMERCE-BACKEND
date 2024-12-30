@@ -2,6 +2,8 @@ const Product = require("../models/ProductModel");
 const User = require("../models/UserModel");
 const Discount = require("../models/DiscountModel");
 const Rate = require("../models/RateModel");
+const axios = require("axios");
+
 const {
   deleteFromCloudinary,
   extractPublicId,
@@ -227,57 +229,6 @@ class ProductService {
     }
   }
 
-  //Lấy danh sách sản phẩm khuyến nghị cho khách hàng
-  // async getRecommendedProducts(page = 1, itemsPerPage = 15, userId) {
-  //   try {
-  //     const skip = (page - 1) * itemsPerPage;
-
-  //     // Fetch products from the database without any filtering
-  //     const products = await Product.find()
-  //       .skip(skip)
-  //       .limit(itemsPerPage)
-  //       .populate("seller", "shopName"); // .populate('product', 'name'); // Populate with product name
-
-  //     const user = await User.findById(userId).select("favoriteProducts");
-
-  //     const favoriteProductIds = user
-  //       ? user.favoriteProducts.map((prod) => prod.toString())
-  //       : [];
-
-  //     // Count total products to calculate total pages
-  //     const totalItems = await Product.countDocuments();
-  //     const totalPages = Math.ceil(totalItems / itemsPerPage);
-
-  //     const formattedProducts = products.map((product) => {
-  //       const productObj = product.toObject(); // Chuyển product thành đối tượng JavaScript thuần
-  //       const shopInfor = product.seller
-  //         ? {
-  //             shopId: product.seller._id,
-  //             shopName: product.seller.shopName,
-  //           }
-  //         : null;
-
-  //       const isFavorite = favoriteProductIds.includes(product._id.toString()); // Kiểm tra sản phẩm có trong danh sách yêu thích không
-
-  //       delete productObj.seller; // Xóa trường seller khỏi product
-
-  //       return { ...productObj, shopInfor, isFavorite }; // Thêm shopInfo và isFavourite vào phản hồi
-  //     });
-
-  //     return {
-  //       products: formattedProducts,
-  //       pagination: {
-  //         currentPage: page,
-  //         totalPages,
-  //         itemsPerPage,
-  //         totalItems,
-  //       },
-  //     };
-  //   } catch (error) {
-  //     throw new Error(error.message);
-  //   }
-  // }
-
   async getRecommendedProducts(page = 1, itemsPerPage = 15, userId) {
     try {
       const skip = (page - 1) * itemsPerPage;
@@ -402,6 +353,133 @@ class ProductService {
       throw new Error(error.message);
     }
   }
+
+  // async getRecommendedProducts(page = 1, itemsPerPage = 15, userId) {
+  //   try {
+  //     const skip = (page - 1) * itemsPerPage;
+
+  //     // Bước 1: Lấy dữ liệu người dùng nếu có userId
+  //     const user = userId
+  //       ? await User.findById(userId)
+  //           .select("favoriteProducts cart orders")
+  //           .populate({
+  //             path: "cart",
+  //             populate: { path: "productId", select: "name price" },
+  //           })
+  //       : null;
+
+  //     // Bước 2: Tổng hợp productId từ các nguồn yêu thích, giỏ hàng, và đơn hàng
+  //     const favoriteProductIds =
+  //       user?.favoriteProducts?.map((prod) => prod.toString()) || [];
+  //     const cartProductIds =
+  //       user?.cart?.map((item) => item.productId.toString()) || [];
+  //     const orderProductIds = user?.orders
+  //       ? user.orders.flatMap((order) =>
+  //           order.items.map((item) => item.productId.toString())
+  //         )
+  //       : [];
+
+  //     let recommendedProductIds = [];
+
+  //     // Bước 3: Gọi API FastAPI để lấy sản phẩm khuyến nghị
+  //     if (
+  //       user &&
+  //       (favoriteProductIds.length ||
+  //         cartProductIds.length ||
+  //         orderProductIds.length)
+  //     ) {
+  //       const inputProducts = [
+  //         ...favoriteProductIds,
+  //         ...cartProductIds,
+  //         ...orderProductIds,
+  //       ].join(",");
+  //       try {
+  //         if (!inputProducts) {
+  //           console.error("Input products is empty.");
+  //           return;
+  //         }
+  //         const response = await axios.post("http://127.0.0.1:8000/recommend", {
+  //           input: inputProducts,
+  //           size: itemsPerPage,
+  //         });
+
+  //         const recommendations = response.data.recommendations;
+  //         if (!recommendations) {
+  //           console.error("No recommendations found.");
+  //           return;
+  //         }
+
+  //         // Tiếp tục xử lý recommendations
+  //       } catch (error) {
+  //         console.error(
+  //           "Error calling Python recommendation API:",
+  //           error.message
+  //         );
+  //       }
+  //     }
+
+  //     // Bước 4: Lấy danh sách sản phẩm từ MongoDB dựa vào gợi ý
+  //     let recommendedProducts = [];
+  //     if (recommendedProductIds.length) {
+  //       recommendedProducts = await Product.find({
+  //         _id: { $in: recommendedProductIds },
+  //       }).populate("seller", "shopName");
+  //     }
+
+  //     // Bước 5: Nếu không có gợi ý, lấy best-seller làm fallback
+  //     if (!recommendedProductIds.length) {
+  //       recommendedProducts = await Product.find()
+  //         .sort({ salesCount: -1 })
+  //         .populate("seller", "shopName");
+  //     }
+
+  //     // Bước 6: Fetch các sản phẩm còn lại (loại bỏ các sản phẩm đã khuyến nghị)
+  //     const remainingProducts = await Product.find({
+  //       _id: { $nin: recommendedProductIds },
+  //     })
+  //       .sort({ createdAt: -1 })
+  //       .populate("seller", "shopName");
+
+  //     // Bước 7: Gộp kết quả khuyến nghị và sản phẩm còn lại
+  //     const mergedProducts = [...recommendedProducts, ...remainingProducts];
+
+  //     // Bước 8: Phân trang dữ liệu
+  //     const totalItems = mergedProducts.length;
+  //     const totalPages = Math.ceil(totalItems / itemsPerPage);
+  //     const paginatedProducts = mergedProducts.slice(skip, skip + itemsPerPage);
+
+  //     // Bước 9: Định dạng dữ liệu trả về
+  //     const formattedProducts = paginatedProducts.map((product) => {
+  //       const productObj = product.toObject();
+  //       const shopInfor = product.seller
+  //         ? {
+  //             shopId: product.seller._id,
+  //             shopName: product.seller.shopName,
+  //           }
+  //         : null;
+
+  //       return {
+  //         ...productObj,
+  //         id: productObj._id,
+  //         shopInfor,
+  //         isFavorite: favoriteProductIds.includes(productObj._id.toString()),
+  //       };
+  //     });
+
+  //     return {
+  //       products: formattedProducts,
+  //       pagination: {
+  //         currentPage: page,
+  //         totalPages,
+  //         itemsPerPage,
+  //         totalItems,
+  //       },
+  //     };
+  //   } catch (error) {
+  //     console.error("Error fetching recommended products:", error.message);
+  //     throw new Error(error.message);
+  //   }
+  // }
 
   async searchProducts({
     userId,
