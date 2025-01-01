@@ -2,6 +2,8 @@ const Product = require("../models/ProductModel");
 const User = require("../models/UserModel");
 const Discount = require("../models/DiscountModel");
 const Rate = require("../models/RateModel");
+const Order = require("../models/OrderModel");
+const Cart = require("../models/CartModel");
 const axios = require("axios");
 
 const {
@@ -192,7 +194,153 @@ class ProductService {
     }
   }
 
+  // async getRecommendedProducts(page = 1, itemsPerPage = 15, userId) {
+  //   try {
+  //     const skip = (page - 1) * itemsPerPage;
+
+  //     const user = userId
+  //       ? await User.findById(userId)
+  //           .select("favoriteProducts cart")
+  //           .populate({
+  //             path: "cart",
+  //             populate: {
+  //               path: "cartItems.product",
+  //               select: "_id",
+  //             },
+  //           })
+  //       : null;
+
+  //     const favoriteProductIds = Array.isArray(user?.favoriteProducts)
+  //       ? user.favoriteProducts.map((prod) => prod.toString())
+  //       : [];
+
+  //       console.log("fav", favoriteProductIds)
+
+  //     const cartProductIds = Array.isArray(user?.cart?.cartItems)
+  //       ? user.cart.cartItems.map((item) => item.product._id.toString())
+  //       : [];
+
+  //     const orderProductIds = Array.isArray(user?.order)
+  //       ? user.order.flatMap((order) =>
+  //           order.items.map((item) => item.productId.toString())
+  //         )
+  //       : [];
+
+  //     // const orders = await Order.find({ userId }).populate("items.productId");
+
+  //     // const orderProductIds =
+  //     //   Array.isArray(orders) && orders.length > 0
+  //     //     ? orders.flatMap((order) =>
+  //     //         Array.isArray(order.items)
+  //     //           ? order.items
+  //     //               .filter((item) => item.productId) // Loại bỏ items không có productId
+  //     //               .map((item) => item.productId.toString())
+  //     //           : []
+  //     //       )
+  //     //     : [];
+
+  //     // Fetch recommended products
+  //     let recommendedProducts = [];
+
+  //     if (
+  //       !user ||
+  //       (!favoriteProductIds.length &&
+  //         !cartProductIds.length &&
+  //         !orderProductIds.length)
+  //     ) {
+  //       // Best-seller products
+  //       recommendedProducts = await Product.find()
+  //         .sort({ salesCount: -1 })
+  //         .populate("seller", "shopName");
+  //     } else {
+  //       const similarCategoryIds = await Product.distinct("category", {
+  //         _id: {
+  //           $in: [...favoriteProductIds, ...cartProductIds, ...orderProductIds],
+  //         },
+  //       });
+
+  //       recommendedProducts = await Product.find({
+  //         _id: {
+  //           $nin: [
+  //             ...favoriteProductIds,
+  //             ...cartProductIds,
+  //             ...orderProductIds,
+  //           ],
+  //         },
+  //         category: { $in: similarCategoryIds },
+  //       })
+  //         .sort({ salesCount: -1 })
+  //         .populate("seller", "shopName");
+  //     }
+
+  //     // Exclude recommended product IDs to get remaining products
+  //     const recommendedProductIds = recommendedProducts.map((prod) =>
+  //       prod._id.toString()
+  //     );
+  //     const remainingProducts = await Product.find({
+  //       _id: { $nin: recommendedProductIds },
+  //     })
+  //       .sort({ createdAt: -1 }) // Optional: sort remaining products by newest
+  //       .populate("seller", "shopName");
+
+  //     // Merge recommended and remaining products
+  //     const mergedProducts = [...recommendedProducts, ...remainingProducts];
+
+  //     // Paginate merged products
+  //     const totalItems = mergedProducts.length;
+  //     const totalPages = Math.ceil(totalItems / itemsPerPage);
+  //     const paginatedProducts = mergedProducts.slice(skip, skip + itemsPerPage);
+
+  //     // Format products
+  //     const formattedProducts = paginatedProducts.map((product) => {
+  //       const productObj = product.toObject();
+  //       const shopInfor = product.seller
+  //         ? {
+  //             shopId: product.seller._id,
+  //             shopName: product.seller.shopName,
+  //           }
+  //         : null;
+
+  //       return {
+  //         _id: productObj._id,
+  //         name: productObj.name,
+  //         description: productObj.description,
+  //         SKU: productObj.SKU,
+  //         price: productObj.price,
+  //         category: productObj.category,
+  //         inStock: productObj.inStock,
+  //         image: productObj.image,
+  //         rates: productObj.rates,
+  //         sold: productObj.sold,
+  //         averageStar: productObj.averageStar,
+  //         rateCount: productObj.rateCount,
+  //         priceAfterSale: productObj.priceAfterSale,
+  //         __v: productObj.__v,
+  //         salePercent: productObj.salePercent,
+  //         isDeleted: productObj.isDeleted,
+  //         thumbnail: productObj.thumbnail,
+  //         id: productObj._id,
+  //         shopInfor,
+  //         isFavorite: favoriteProductIds.includes(productObj._id.toString()),
+  //       };
+  //     });
+
+  //     return {
+  //       products: formattedProducts,
+  //       pagination: {
+  //         currentPage: page,
+  //         totalPages,
+  //         itemsPerPage,
+  //         totalItems,
+  //       },
+  //     };
+  //   } catch (error) {
+  //     throw new Error(error.message);
+  //   }
+  // }
+
   // Lấy tất cả sản phẩm của shop
+
   async getAllShopProducts(sellerId, page = 1, itemsPerPage = 15) {
     try {
       // Calculate skip and limit for pagination
@@ -226,131 +374,6 @@ class ProductService {
       };
     } catch (error) {
       throw new Error("Error retrieving products: " + error.message);
-    }
-  }
-
-  async getRecommendedProducts(page = 1, itemsPerPage = 15, userId) {
-    try {
-      const skip = (page - 1) * itemsPerPage;
-
-      const user = userId
-        ? await User.findById(userId)
-            .select("favoriteProducts cart orders")
-            .populate({
-              path: "cart", // Nếu cart là tham chiếu
-              populate: { path: "productId", select: "name price" }, // Populate sản phẩm
-            })
-        : null;
-
-      const favoriteProductIds = Array.isArray(user?.favoriteProducts)
-        ? user.favoriteProducts.map((prod) => prod.toString())
-        : [];
-      const cartProductIds = Array.isArray(user?.cart)
-        ? user.cart.map((item) => item.productId.toString())
-        : [];
-      const orderProductIds = Array.isArray(user?.orders)
-        ? user.orders.flatMap((order) =>
-            order.items.map((item) => item.productId.toString())
-          )
-        : [];
-
-      // Fetch recommended products
-      let recommendedProducts = [];
-
-      if (
-        !user ||
-        (!favoriteProductIds.length &&
-          !cartProductIds.length &&
-          !orderProductIds.length)
-      ) {
-        // Best-seller products
-        recommendedProducts = await Product.find()
-          .sort({ salesCount: -1 })
-          .populate("seller", "shopName");
-      } else {
-        const similarCategoryIds = await Product.distinct("category", {
-          _id: {
-            $in: [...favoriteProductIds, ...cartProductIds, ...orderProductIds],
-          },
-        });
-
-        recommendedProducts = await Product.find({
-          _id: {
-            $nin: [
-              ...favoriteProductIds,
-              ...cartProductIds,
-              ...orderProductIds,
-            ],
-          },
-          category: { $in: similarCategoryIds },
-        })
-          .sort({ salesCount: -1 })
-          .populate("seller", "shopName");
-      }
-
-      // Exclude recommended product IDs to get remaining products
-      const recommendedProductIds = recommendedProducts.map((prod) =>
-        prod._id.toString()
-      );
-      const remainingProducts = await Product.find({
-        _id: { $nin: recommendedProductIds },
-      })
-        .sort({ createdAt: -1 }) // Optional: sort remaining products by newest
-        .populate("seller", "shopName");
-
-      // Merge recommended and remaining products
-      const mergedProducts = [...recommendedProducts, ...remainingProducts];
-
-      // Paginate merged products
-      const totalItems = mergedProducts.length;
-      const totalPages = Math.ceil(totalItems / itemsPerPage);
-      const paginatedProducts = mergedProducts.slice(skip, skip + itemsPerPage);
-
-      // Format products
-      const formattedProducts = paginatedProducts.map((product) => {
-        const productObj = product.toObject();
-        const shopInfor = product.seller
-          ? {
-              shopId: product.seller._id,
-              shopName: product.seller.shopName,
-            }
-          : null;
-
-        return {
-          _id: productObj._id,
-          name: productObj.name,
-          description: productObj.description,
-          SKU: productObj.SKU,
-          price: productObj.price,
-          category: productObj.category,
-          inStock: productObj.inStock,
-          image: productObj.image,
-          rates: productObj.rates,
-          sold: productObj.sold,
-          averageStar: productObj.averageStar,
-          rateCount: productObj.rateCount,
-          priceAfterSale: productObj.priceAfterSale,
-          __v: productObj.__v,
-          salePercent: productObj.salePercent,
-          isDeleted: productObj.isDeleted,
-          thumbnail: productObj.thumbnail,
-          id: productObj._id,
-          shopInfor,
-          isFavorite: favoriteProductIds.includes(productObj._id.toString()),
-        };
-      });
-
-      return {
-        products: formattedProducts,
-        pagination: {
-          currentPage: page,
-          totalPages,
-          itemsPerPage,
-          totalItems,
-        },
-      };
-    } catch (error) {
-      throw new Error(error.message);
     }
   }
 
@@ -404,10 +427,10 @@ class ProductService {
   //         });
 
   //         const recommendations = response.data.recommendations;
-  //         if (!recommendations) {
-  //           console.error("No recommendations found.");
-  //           return;
-  //         }
+  //         // if (!recommendations) {
+  //         //   console.error("No recommendations found.");
+  //         //   return;
+  //         // }
 
   //         // Tiếp tục xử lý recommendations
   //       } catch (error) {
@@ -587,6 +610,164 @@ class ProductService {
       };
     } catch (error) {
       throw new Error("Error searching products: " + error.message);
+    }
+  }
+
+  async getRecommendedProducts(page = 1, itemsPerPage = 15, userId) {
+    try {
+      const skip = (page - 1) * itemsPerPage;
+
+      let recommendedProducts = [];
+      let favoriteProductIds = [];
+      let cartProductIds = [];
+      let orderProductIds = [];
+
+      let recommendedProductIds;
+      let remainingProducts;
+
+      if (userId) {
+        const user = await User.findById(userId)
+          .select("favoriteProducts cart")
+          .populate({
+            path: "cart",
+            populate: {
+              path: "cartItems.product",
+              select: "_id",
+            },
+          });
+
+        favoriteProductIds = Array.isArray(user?.favoriteProducts)
+          ? user.favoriteProducts.map((prod) => prod.toString())
+          : [];
+
+        cartProductIds = Array.isArray(user?.cart?.cartItems)
+          ? user.cart.cartItems.map((item) => item.product._id.toString())
+          : [];
+
+        orderProductIds = Array.isArray(user?.order)
+          ? user.order.flatMap((order) =>
+              order.items.map((item) => item.productId.toString())
+            )
+          : [];
+
+        if (
+          !favoriteProductIds.length &&
+          !cartProductIds.length &&
+          !orderProductIds.length
+        ) {
+          // Fetch best-seller products if user has no preferences
+          recommendedProducts = await Product.find()
+            .sort({ salesCount: -1 })
+            .populate("seller", "shopName");
+        } else {
+          const similarCategoryIds = await Product.distinct("category", {
+            _id: {
+              $in: [
+                ...favoriteProductIds,
+                ...cartProductIds,
+                ...orderProductIds,
+              ],
+            },
+          });
+
+          recommendedProducts = await Product.find({
+            _id: {
+              $nin: [
+                ...favoriteProductIds,
+                ...cartProductIds,
+                ...orderProductIds,
+              ],
+            },
+            category: { $in: similarCategoryIds },
+          })
+            .sort({ salesCount: -1 })
+            .populate("seller", "shopName");
+        }
+
+        // Exclude recommended product IDs to get remaining products
+        recommendedProductIds = recommendedProducts.map((prod) =>
+          prod._id.toString()
+        );
+        remainingProducts = await Product.find({
+          _id: { $nin: recommendedProductIds },
+        })
+          .sort({ createdAt: -1 }) // Optional: sort remaining products by newest
+          .populate("seller", "shopName");
+
+        // Merge recommended and remaining products
+        //const mergedProducts = [...recommendedProducts, ...remainingProducts];
+      } else {
+        // If userId is null, return all products sorted by sales count
+        recommendedProducts = await Product.find()
+          .sort({ salesCount: -1 })
+          .populate("seller", "shopName");
+
+        remainingProducts = [];
+      }
+
+      // Exclude recommended product IDs to get remaining products
+      // recommendedProductIds = recommendedProducts.map((prod) =>
+      //   prod._id.toString()
+      // );
+      // remainingProducts = await Product.find({
+      //   _id: { $nin: recommendedProductIds },
+      // })
+      //   .sort({ createdAt: -1 }) // Optional: sort remaining products by newest
+      //   .populate("seller", "shopName");
+
+      // Merge recommended and remaining products
+      const mergedProducts = [...recommendedProducts, ...remainingProducts];
+
+      // Paginate merged products
+      const totalItems = mergedProducts.length;
+      const totalPages = Math.ceil(totalItems / itemsPerPage);
+      const paginatedProducts = mergedProducts.slice(skip, skip + itemsPerPage);
+
+      // Format products
+      const formattedProducts = paginatedProducts.map((product) => {
+        const productObj = product.toObject();
+        const shopInfor = product.seller
+          ? {
+              shopId: product.seller._id,
+              shopName: product.seller.shopName,
+            }
+          : null;
+
+        return {
+          _id: productObj._id,
+          name: productObj.name,
+          description: productObj.description,
+          SKU: productObj.SKU,
+          price: productObj.price,
+          category: productObj.category,
+          inStock: productObj.inStock,
+          image: productObj.image,
+          rates: productObj.rates,
+          sold: productObj.sold,
+          averageStar: productObj.averageStar,
+          rateCount: productObj.rateCount,
+          priceAfterSale: productObj.priceAfterSale,
+          __v: productObj.__v,
+          salePercent: productObj.salePercent,
+          isDeleted: productObj.isDeleted,
+          thumbnail: productObj.thumbnail,
+          id: productObj._id,
+          shopInfor,
+          isFavorite: favoriteProductIds.includes(productObj._id.toString()),
+        };
+      });
+
+      return {
+        products: formattedProducts,
+        pagination: {
+          currentPage: page,
+          totalPages,
+          itemsPerPage,
+          totalItems,
+        },
+      };
+    } catch (error) {
+      throw new Error(error.message);
     }
   }
 }

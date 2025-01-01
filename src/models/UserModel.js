@@ -29,6 +29,7 @@ const userSchema = new Schema(
     refresh_token: { type: String, require: true },
     cart: { type: Schema.Types.ObjectId, ref: 'Cart' },
     favoriteProducts: [{ type: Schema.Types.ObjectId, ref: 'Product' }],
+    order: { type: Schema.Types.ObjectId, ref: 'Order' },
 
     // Fields specific to sellers
     shopName: {
