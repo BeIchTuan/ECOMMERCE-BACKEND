@@ -3,7 +3,7 @@ const dotenv = require("dotenv");
 const Product = require("../models/ProductModel");
 dotenv.config();
 
-const sendOrderConfirmationEmail = async (orderDetails, customerEmail) => {
+const sendOrderConfirmationEmail = async (orderDetails, customerEmail, status) => {
   try {
     const transporter = nodemailer.createTransport({
       service: "gmail",
@@ -15,13 +15,35 @@ const sendOrderConfirmationEmail = async (orderDetails, customerEmail) => {
 
     const emailHTML = await generateOrderEmailHTML(orderDetails);
 
+    let subject;
+    switch (status) {
+      case "pending":
+        subject = "Đơn hàng của bạn đang chờ xử lý";
+        break;
+      case "preparing":
+        subject = "Đơn hàng của bạn đang được chuẩn bị";
+        break;
+      case "delivering":
+        subject = "Đơn hàng của bạn đang được vận chuyển";
+        break;
+      case "delivered":
+        subject = "Đơn hàng của bạn đã được giao";
+        break;
+      case "success":
+        subject = "Đơn hàng của bạn đã được giao thành công";
+        break;
+      default:
+        subject = "Xác nhận đơn hàng";
+        break;
+    }
+
     const mailOptions = {
       from: {
         name: "Phố Mua Sắm",
         address: process.env.EMAIL_NAME,
       },
       to: customerEmail,
-      subject: "Xác nhận đơn hàng của bạn",
+      subject: subject,
       html: emailHTML,
     };
 

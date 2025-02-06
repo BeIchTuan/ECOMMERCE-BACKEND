@@ -229,7 +229,7 @@ class OrderService {
       }
 
       const populatedOrder = await Order.findById(savedOrder._id)
-        .populate("paymentMethod", "name") 
+        .populate("paymentMethod", "name")
         .populate("deliveryMethod", "name");
 
       const responseItems = await Promise.all(
@@ -260,14 +260,14 @@ class OrderService {
         address: savedOrder.address,
         items: responseItems,
       };
-  
+
       // Lấy email khách hàng từ database
       const customer = await User.findById(userId).select("email");
       if (!customer) throw new Error("Customer not found");
-  
+
       // Gửi email xác nhận
-      await sendOrderConfirmationEmail( orderResponse, customer.email);
-  
+      await sendOrderConfirmationEmail(orderResponse, customer.email);
+
       return orderResponse;
 
       // return {
@@ -464,7 +464,9 @@ class OrderService {
 
   async updateOrderStatus(orderId, status) {
     try {
-      const order = await Order.findById(orderId).populate("items.productId");
+      const order = await Order.findById(orderId)
+        .populate("items.productId")
+        .populate("userId");
 
       if (!order) {
         return { success: false };
@@ -489,6 +491,24 @@ class OrderService {
       }
 
       await order.save();
+
+      // Gửi email thông báo cho khách hàng
+      const emailDetails = {
+        orderId: order._id,
+        orderDate: order.createdAt,
+        totalPrice: order.totalPrice,
+        paymentMethod: order.paymentMethod,
+        deliveryMethod: order.deliveryMethod,
+        shippingCost: order.shippingCost,
+        deliveryStatus: order.deliveryStatus,
+        paymentStatus: order.paymentStatus,
+        address: order.shippingAddress, // Địa chỉ nhận hàng
+        items: order.items,
+      };
+
+      console.log(order.items)
+
+      await sendOrderConfirmationEmail(emailDetails, order.userId.email, order.deliveryStatus);
 
       return { success: true };
     } catch (error) {
