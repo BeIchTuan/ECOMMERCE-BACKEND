@@ -1,7 +1,8 @@
 const User = require("../models/UserModel");
 const Order = require("../models/OrderModel");
 const Rate = require("../models/RateModel");
-const bcrypt = require("bcrypt"); // For password hashing
+const bcrypt = require("bcrypt"); 
+const admin = require("../config/firebaseAdmin");
 const { generalAccessToken, generalRefreshToken } = require("./Jwtservice");
 const mongoose = require("mongoose");
 const { deleteFromCloudinary } = require("../utils/uploadImage");
@@ -139,6 +140,61 @@ const loginUser = (userLogin) => {
       reject(e);
     }
   });
+};
+
+const loginGoogle = async (token) => {
+  try {
+    const decodedToken = await admin.auth().verifyIdToken(token);
+    const { uid, email, name, picture } = decodedToken;
+
+    let user = await User.findOne({ email });
+
+    if (!user) {
+      user = new User({
+        uid,
+        email,
+        name,
+        avatar: picture,
+        role: "user"
+      });
+      await user.save();
+    }
+
+    const access_token = await generalAccessToken({
+      id: user.id,
+      role: user.role,
+    });
+
+    // Chuẩn bị thông tin người dùng
+    const userData = {
+      id: user._id,
+      email: user.email,
+      role: user.role,
+      name: user.name,
+      avatar: user.avatar,
+      birthday: user.birthday,
+      gender: user.gender,
+      phone: user.phone,
+      address: user.address,
+    };
+
+    // Nếu là seller, thêm thông tin cửa hàng
+    if (user.role === "seller") {
+      userData.shopName = user.shopName;
+      userData.shopDescription = user.shopDescription;
+      userData.shopAddress = user.shopAddress;
+    }
+
+    return {
+      status: "success",
+      message: "Login successful",
+      access_token,
+      user: userData,
+    };
+  } catch (error) {
+    console.error("Lỗi xác thực Google:", error);
+    throw new Error("Google authentication failed");
+  }
 };
 
 const updateUser = (id, data) => {
@@ -323,7 +379,7 @@ const getCustomerOrderHistory = (
     try {
       const skip = (page - 1) * itemsPerPage;
 
-      const filter = { userId: userId};
+      const filter = { userId: userId };
 
       if (sellerId) {
         filter["items"] = { $elemMatch: { sellerId: sellerId } };
@@ -542,6 +598,7 @@ const getFavoriteProducts = (page = 1, itemsPerPage = 15, userId) => {
 module.exports = {
   createUser,
   loginUser,
+  loginGoogle,
   updateUser,
   deleteUser,
   getUser,

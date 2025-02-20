@@ -10,8 +10,8 @@ const addressSchema = new mongoose.Schema({
 
 const userSchema = new Schema(
   {
-    email: { type: String, required: true },
-    password: { type: String, required: true },
+    email: { type: String},
+    password: { type: String},
     name: { type: String, required: false },
     avatar: { type: String },
     birthday: { type: Date },

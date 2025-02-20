@@ -106,6 +106,35 @@ const loginUser = async (req, res) => {
   }
 };
 
+const loginGoogle = async (req, res) => {
+  try {
+    const { token } = req.body;
+
+    if (!token) {
+      return res.status(400).json({
+        status: "error",
+        message: "Token is required",
+      });
+    }
+
+    const response = await UserService.loginGoogle(token);
+
+    res.cookie("accessToken", response.access_token, {
+      httpOnly: true,
+      secure: false,
+      sameSite: "None",
+      maxAge: 86400000, 
+    });
+
+    return res.status(200).json(response);
+  } catch (error) {
+    return res.status(401).json({
+      status: "error",
+      message: error.message || "Google login failed",
+    });
+  }
+};
+
 const updateUser = async (req, res) => {
   try {
     const userId = req.id;
@@ -318,6 +347,7 @@ const getFavoriteProducts = (req, res) => {
 module.exports = {
   createUser,
   loginUser,
+  loginGoogle,
   updateUser,
   deleteUser,
   getUser,
