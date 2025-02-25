@@ -5,7 +5,8 @@ const { authMiddleware } = require('../middlewares/authMiddleware');
 const upload = require("../middlewares/uploadImage");
 
 //Work with user information
-router.post('/auth/register', userController.createUser)
+router.post('/auth/register', userController.sendOTP)
+router.post('/auth/confirm-otp', userController.verifyOTP)
 router.post('/auth/login', userController.loginUser)
 router.post('/auth/google', userController.loginGoogle)
 router.put('/user/:id', upload.single("avatar"), authMiddleware(['user', 'seller']), userController.updateUser)

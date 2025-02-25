@@ -1,40 +1,109 @@
-const { json } = require("body-parser");
-const jwt = require("jsonwebtoken");
+// const { json } = require("body-parser");
+// const jwt = require("jsonwebtoken");
 const UserService = require("../services/UserService");
 const User = require("../models/UserModel");
-const cloudinary = require("../config/cloudinary");
+// const cloudinary = require("../config/cloudinary");
 const { uploadToCloudinary } = require("../utils/uploadImage");
+const redisClient = require("../config/redisClient");
+const { sendEmailOTP, sendSMS } = require("../services/EmailService");
 
-const createUser = async (req, res) => {
+// const createUser = async (req, res) => {
+//   try {
+//     const { email, password, confirmPassword } = req.body;
+//     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+//     const isEmail = emailRegex.test(email);
+
+//     if (!email || !password || !confirmPassword) {
+//       return res.status(422).json({
+//         status: "error",
+//         message: "All fields are required!",
+//       });
+//     } else if (!isEmail) {
+//       return res.status(422).json({
+//         status: "error",
+//         message: "Invalid email format",
+//       });
+//     } else if (password !== confirmPassword) {
+//       return res.status(422).json({
+//         status: "error",
+//         message: "Please check the confirm password again!",
+//       });
+//     }
+
+//     const response = await UserService.createUser(req.body);
+//     return res.status(201).json(response);
+//   } catch (e) {
+//     return res.status(500).json({
+//       message: "Internal server error",
+//       error: e.toString(),
+//     });
+//   }
+// };
+
+const sendOTP = async (req, res) => {
   try {
-    const { email, password, confirmPassword } = req.body;
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    const isEmail = emailRegex.test(email);
+    const { account, password, confirmPassword } = req.body;
 
-    if (!email || !password || !confirmPassword) {
-      return res.status(422).json({
-        status: "error",
-        message: "All fields are required!",
-      });
-    } else if (!isEmail) {
-      return res.status(422).json({
-        status: "error",
-        message: "Invalid email format",
-      });
-    } else if (password !== confirmPassword) {
-      return res.status(422).json({
-        status: "error",
-        message: "Please check the confirm password again!",
-      });
+    if (!account) {
+      return res.status(400).json({ message: "Email or phone are required" });
     }
 
-    const response = await UserService.createUser(req.body);
-    return res.status(201).json(response);
-  } catch (e) {
-    return res.status(500).json({
-      message: "Internal server error",
-      error: e.toString(),
+    if (password !== confirmPassword) {
+      return res.status(400).json({ message: "Passwords do not match" });
+    }
+
+    let isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(account);
+    let existingUser = await User.findOne(isEmail ? { email: account } : { email: account });
+
+    if (existingUser) {
+      return res.status(400).json({ message: "Account already exists" });
+    }
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    
+    await redisClient.setEx(`OTP:${account}`, 300, JSON.stringify({ otp, password }));
+    
+    if (isEmail) {
+      await sendEmailOTP(account, `Your OTP is: ${otp}`);
+    } else {
+      await sendSMS(account, `Your OTP is: ${otp}`);
+    }
+
+    return res.status(200).json({ message: "OTP sent successfully" });
+  } catch (error) {
+    return res.status(500).json({ message: "Internal Server Error", error });
+  }
+};
+
+const verifyOTP = async (req, res) => {
+  try {
+    const { account, otp } = req.body;
+
+    if (!otp || !account) {
+      return res.status(400).json({ message: "OTP and account are required" });
+    }
+
+    const storedData = await redisClient.get(`OTP:${account}`);
+    if (!storedData) {
+      return res.status(400).json({ message: "OTP expired or invalid" });
+    }
+
+    const { otp: storedOTP, password } = JSON.parse(storedData);
+    if (storedOTP !== otp) {
+      return res.status(400).json({ message: "Invalid OTP" });
+    }
+
+    await redisClient.del(`OTP:${account}`);
+
+    const newUser = await UserService.createUser({
+      email: /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(account) ? account : undefined,
+      phone: /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(account) ? undefined : account,
+      password,
     });
+
+    return res.status(201).json(newUser);
+  } catch (error) {
+    return res.status(500).json({ message: "Internal Server Error", error });
   }
 };
 
@@ -123,7 +192,7 @@ const loginGoogle = async (req, res) => {
       httpOnly: true,
       secure: false,
       sameSite: "None",
-      maxAge: 86400000, 
+      maxAge: 86400000,
     });
 
     return res.status(200).json(response);
@@ -345,9 +414,11 @@ const getFavoriteProducts = (req, res) => {
 };
 
 module.exports = {
-  createUser,
+  //createUser,
   loginUser,
   loginGoogle,
+  sendOTP,
+  verifyOTP,
   updateUser,
   deleteUser,
   getUser,

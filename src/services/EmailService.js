@@ -1,6 +1,9 @@
 const nodemailer = require("nodemailer");
-const dotenv = require("dotenv");
 const Product = require("../models/ProductModel");
+const twilio = require("twilio");
+const client = new twilio(process.env.TWILIO_SID, process.env.TWILIO_AUTH_TOKEN);
+const dotenv = require("dotenv");
+
 dotenv.config();
 
 const sendOrderConfirmationEmail = async (orderDetails, customerEmail, status) => {
@@ -156,4 +159,32 @@ async function generateOrderEmailHTML(order) {
   `;
 }
 
-module.exports = { sendOrderConfirmationEmail };
+const sendEmailOTP = async (to, message) => {
+  const transporter = nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+      user: process.env.EMAIL_NAME,
+      pass: process.env.EMAIL_PASSWORD,
+    },
+  });
+
+  const mailOptions = {
+    from: process.env.EMAIL_NAME,
+    to,
+    subject: "OTP Verification",
+    text: message,
+  };
+
+  return transporter.sendMail(mailOptions);
+};
+
+const sendSMS = async (to, message) => {
+  return client.messages.create({
+    body: message,
+    from: process.env.TWILIO_PHONE_NUMBER,
+    to,
+  });
+};
+
+
+module.exports = { sendOrderConfirmationEmail, sendEmailOTP, sendSMS };
