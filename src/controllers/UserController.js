@@ -42,7 +42,7 @@ const { sendEmailOTP, sendSMS } = require("../services/EmailService");
 
 const sendOTP = async (req, res) => {
   try {
-    const { account, password, confirmPassword } = req.body;
+    const { email: account, password, confirmPassword } = req.body;
 
     if (!account) {
       return res.status(400).json({ message: "Email or phone are required" });
