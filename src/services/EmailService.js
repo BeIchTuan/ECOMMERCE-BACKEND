@@ -1,12 +1,19 @@
 const nodemailer = require("nodemailer");
 const Product = require("../models/ProductModel");
 const twilio = require("twilio");
-const client = new twilio(process.env.TWILIO_SID, process.env.TWILIO_AUTH_TOKEN);
+const client = new twilio(
+  process.env.TWILIO_SID,
+  process.env.TWILIO_AUTH_TOKEN
+);
 const dotenv = require("dotenv");
 
 dotenv.config();
 
-const sendOrderConfirmationEmail = async (orderDetails, customerEmail, status) => {
+const sendOrderConfirmationEmail = async (
+  orderDetails,
+  customerEmail,
+  status
+) => {
   try {
     const transporter = nodemailer.createTransport({
       service: "gmail",
@@ -186,5 +193,38 @@ const sendSMS = async (to, message) => {
   });
 };
 
+const sendEmail = async ({ to, subject, html }) => {
+  try {
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.EMAIL_NAME,
+        pass: process.env.EMAIL_PASSWORD,
+      },
+    });
 
-module.exports = { sendOrderConfirmationEmail, sendEmailOTP, sendSMS };
+    const mailOptions = {
+      from: {
+        name: "Phố Mua Sắm",
+        address: process.env.EMAIL_NAME,
+      },
+      to,
+      subject,
+      html,
+    };
+
+    const info = transporter.sendMail(mailOptions);
+    console.log("Email sent:", info.messageId);
+    return info;
+  } catch (error) {
+    console.error("Error sending email:", error);
+    throw error;
+  }
+};
+
+module.exports = {
+  sendOrderConfirmationEmail,
+  sendEmailOTP,
+  sendSMS,
+  sendEmail,
+};

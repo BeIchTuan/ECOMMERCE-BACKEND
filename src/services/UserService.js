@@ -6,10 +6,11 @@ const admin = require("../config/firebaseAdmin");
 const { generalAccessToken, generalRefreshToken } = require("./Jwtservice");
 const mongoose = require("mongoose");
 const { deleteFromCloudinary } = require("../utils/uploadImage");
+const EmailService = require("../services/EmailService");
 
 const createUser = (newUser) => {
   return new Promise(async (resolve, reject) => {
-    const { email, password, role, shopName, shopDescription, address } =
+    const { email, password, role, shopName, shopDescription, shopAddress } =
       newUser;
 
     try {
@@ -35,7 +36,7 @@ const createUser = (newUser) => {
 
       // If the user is registering as a seller, add additional seller fields
       if (role === "seller") {
-        if (!shopName || !shopDescription || !address) {
+        if (!shopName || !shopDescription || !shopAddress) {
           return resolve({
             status: "error",
             message: "Seller-specific fields are required",
@@ -44,7 +45,7 @@ const createUser = (newUser) => {
         // Add seller-specific data to userData
         userData.shopName = shopName;
         userData.shopDescription = shopDescription;
-        userData.address = address;
+        userData.address = shopAddress;
       }
 
       // Create the user in the database
@@ -196,6 +197,52 @@ const loginGoogle = async (token) => {
     throw new Error("Google authentication failed");
   }
 };
+
+const resetPassword = async (email) =>  {
+  try {
+    const user = await User.findOne({ email });
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    const newPassword = Math.floor(
+      100000 + Math.random() * 900000
+    ).toString();
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    user.password = hashedPassword;
+    await user.save();
+
+    const emailContent = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #2c3e50; text-align: center;">Yêu cầu cấp lại mật khẩu</h2>
+        <p>Xin chào <strong>${user.name}</strong>,</p>
+        <p>Mật khẩu mới của bạn là:</p>
+        <div style="text-align: center; font-size: 18px; font-weight: bold; margin: 20px 0;">
+          ${newPassword}
+        </div>
+        <p>Vui lòng đổi mật khẩu ngay lập tức để bảo mật tài khoản.</p>
+        <p style="font-size: 12px; color: #666;">Email này được gửi tự động, vui lòng không trả lời.</p>
+      </div>
+    `;
+
+    await EmailService.sendEmail({
+      to: user.email,
+      subject: "[Phố Mua Sắm] Yêu cầu cấp lại mật khẩu",
+      html: emailContent,
+    });
+
+    console.log("Password reset email sent successfully.");
+    return {
+      success: true,
+      message: "Password reset email sent successfully",
+    };
+  } catch (error) {
+    console.error("Error in PasswordService:", error);
+    throw new Error(`Failed to reset password: ${error.message}`);
+  }
+}
 
 const updateUser = (id, data) => {
   return new Promise(async (resolve, reject) => {
@@ -599,6 +646,7 @@ module.exports = {
   createUser,
   loginUser,
   loginGoogle,
+  resetPassword,
   updateUser,
   deleteUser,
   getUser,

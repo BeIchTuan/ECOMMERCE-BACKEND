@@ -9,6 +9,8 @@ router.post('/auth/register', userController.sendOTP)
 router.post('/auth/confirm-otp', userController.verifyOTP)
 router.post('/auth/login', userController.loginUser)
 router.post('/auth/google', userController.loginGoogle)
+router.put("/forget-password", userController.resetPassword);
+
 router.put('/user/:id', upload.single("avatar"), authMiddleware(['user', 'seller']), userController.updateUser)
 router.delete('/user/:id', userController.deleteUser)
 router.get('/user/:id', userController.getUser)

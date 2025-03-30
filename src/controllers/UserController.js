@@ -42,7 +42,15 @@ const { sendEmailOTP, sendSMS } = require("../services/EmailService");
 
 const sendOTP = async (req, res) => {
   try {
-    const { email: account, password, confirmPassword } = req.body;
+    const {
+      email: account,
+      password,
+      confirmPassword,
+      role,
+      shopName,
+      shopDescription,
+      shopAddress,
+    } = req.body;
 
     if (!account) {
       return res.status(400).json({ message: "Email or phone are required" });
@@ -53,16 +61,34 @@ const sendOTP = async (req, res) => {
     }
 
     let isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(account);
-    let existingUser = await User.findOne(isEmail ? { email: account } : { email: account });
+    let existingUser = await User.findOne(
+      isEmail ? { email: account } : { email: account }
+    );
 
     if (existingUser) {
       return res.status(400).json({ message: "Account already exists" });
     }
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    
-    await redisClient.setEx(`OTP:${account}`, 300, JSON.stringify({ otp, password }));
-    
+
+    console.log("OTP: ", otp);
+
+    await redisClient.setEx(
+      `OTP:${account}`,
+      300,
+      JSON.stringify({
+        otp,
+        password,
+        role,
+        shopName,
+        shopDescription,
+        shopAddress,
+      })
+    );
+
+    const redisData = await redisClient.get(`OTP:${account}`);
+    console.log("Dữ liệu đã lưu trong Redis:", redisData);
+
     if (isEmail) {
       await sendEmailOTP(account, `Your OTP is: ${otp}`);
     } else {
@@ -88,7 +114,14 @@ const verifyOTP = async (req, res) => {
       return res.status(400).json({ message: "OTP expired or invalid" });
     }
 
-    const { otp: storedOTP, password } = JSON.parse(storedData);
+    const {
+      otp: storedOTP,
+      password,
+      role,
+      shopName,
+      shopDescription,
+      shopAddress,
+    } = JSON.parse(storedData);
     if (storedOTP !== otp) {
       return res.status(400).json({ message: "Invalid OTP" });
     }
@@ -99,6 +132,10 @@ const verifyOTP = async (req, res) => {
       email: /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(account) ? account : undefined,
       phone: /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(account) ? undefined : account,
       password,
+      role,
+      shopName,
+      shopDescription,
+      shopAddress,
     });
 
     return res.status(201).json(newUser);
@@ -203,6 +240,24 @@ const loginGoogle = async (req, res) => {
     });
   }
 };
+
+const resetPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Email is required" });
+    }
+
+    const result = await UserService.resetPassword(email);
+    return res.status(200).json({ success: true, message: result.message });
+  } catch (error) {
+    console.error("Error in PasswordController:", error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+}
 
 const updateUser = async (req, res) => {
   try {
@@ -419,6 +474,7 @@ module.exports = {
   loginGoogle,
   sendOTP,
   verifyOTP,
+  resetPassword,
   updateUser,
   deleteUser,
   getUser,
