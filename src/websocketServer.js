@@ -3,6 +3,8 @@ const Message = require("./models/MessageModel");
 const Conversation = require("./models/ConversationModel");
 const User = require("./models/UserModel");
 const ConversationController = require("./controllers/ConversationController");
+const GeminiController = require("../src/controllers/GeminiController")
+const GeminiService = require("../src/services/GeminiService")
 
 class ChatService {
   constructor(wss) {
@@ -61,22 +63,6 @@ class ChatService {
     });
   }
 
-  // addClient(userId, ws) {
-  //   this.clients[userId] = ws;
-  //   console.log(`User ${userId} connected`);
-  // }
-
-  // removeClient(ws) {
-  //   Object.keys(this.clients).forEach((userId) => {
-  //     this.clients[userId] = this.clients[userId].filter(
-  //       (client) => client !== ws
-  //     );
-  //     if (this.clients[userId].length === 0) {
-  //       delete this.clients[userId];
-  //     }
-  //   });
-  // }
-
   addClient(userId, ws) {
     if (!this.clients[userId]) {
       this.clients[userId] = []; // Khởi tạo mảng nếu chưa tồn tại
@@ -121,6 +107,43 @@ class ChatService {
     const { conversationId, sender, content, recipientId } = messageData;
 
     try {
+      // let conversation = await Conversation.findById(conversationId);
+
+      // // Nếu chưa có conversation, tạo mới
+      // if (!conversation) {
+      //   const isChatbot = recipientId === "chatbot";
+      //   conversation = new Conversation({
+      //     members: isChatbot ? [sender] : [sender, recipientId],
+      //     type: isChatbot ? "chatbot" : "private",
+      //   });
+      //   await conversation.save();
+      // }
+      if (recipientId === "chatbot") {
+        const botReply = await GeminiService.ask(content); // Gọi hàm xử lý chatbot
+        const botMessage = new Message({
+          conversationId,
+          sender: "chatbot",
+          content: botReply,
+          timestamp: new Date(),
+          isDelivered: true,
+        });
+        await botMessage.save();
+
+        // Gửi tin nhắn từ chatbot về client
+        ws.send(
+          JSON.stringify({
+            type: "chatMessage",
+            conversationId,
+            senderId: "chatbot",
+            senderName: "Chatbot",
+            senderAvatar: "https://framerusercontent.com/images/w5lBgnZUWpnNg7ifgwZ7RGdJc8.png?scale-down-to=1024",
+            content: botReply,
+            time: botMessage.timestamp,
+          })
+        );
+
+        return;
+      }
       // Lấy thông tin người gửi từ cơ sở dữ liệu
       const senderInfo = await User.findById(sender).select(
         "name avatar shopName role"
@@ -134,7 +157,9 @@ class ChatService {
         senderId: sender,
         senderName: senderInfo.name,
         senderAvatar: senderInfo.avatar,
-        ...(senderInfo.role === "seller" && { senderName: senderInfo.shopName }), // Thêm shopName nếu role là seller
+        ...(senderInfo.role === "seller" && {
+          senderName: senderInfo.shopName,
+        }), // Thêm shopName nếu role là seller
       };
 
       // Lưu tin nhắn vào MongoDB

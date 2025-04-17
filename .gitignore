@@ -3,3 +3,4 @@ node_modules
 api_key.txt
 serviceAccount.json
 test
+dialogflow-key.json
