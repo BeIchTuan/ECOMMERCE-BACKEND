@@ -23,7 +23,8 @@ const messageSchema = new Schema({
   isDelivered: {
     type: Boolean,
     default: false,
-  }
+  },
+  productIds: [{ type: Schema.Types.ObjectId, ref: "Product" }], // Danh sách ID sản phẩm liên quan
 });
 
 module.exports = mongoose.model('Message', messageSchema);

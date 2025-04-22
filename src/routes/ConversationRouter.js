@@ -9,6 +9,6 @@ router.get('/conversation', authMiddleware(['user', 'seller']), ConversationCont
 
 router.post("/chatbot", authMiddleware(['user']), GeminiController.getAnswer);
 router.post('/chatbot/consult', authMiddleware(['user']), GeminiController.consultProduct); //ask about product
-router.get('/history', authMiddleware(['user']), GeminiController.getChatHistory);
+router.get('/chatbot/history', authMiddleware(['user']), GeminiController.getChatHistory);
 
 module.exports = router

@@ -3,7 +3,20 @@ const { GoogleGenerativeAI } = require("@google/generative-ai");
 const Product = require("../models/ProductModel");
 const Conversation = require("../models/ConversationModel");
 const Message = require("../models/MessageModel");
+const User = require("../models/UserModel");
+const Order = require("../models/OrderModel");
 const mongoose = require("mongoose");
+
+const SYSTEM_INSTRUCTIONS = `
+Bạn là trợ lý chatbot chuyên nghiệp cho website thương mại điện tử Phố Mua Sắm.
+Hãy tuân theo các hướng dẫn sau:
+1. Trả lời ngắn gọn, chuyên nghiệp và thân thiện
+2. Tập trung vào thông tin sản phẩm và mua sắm
+3. Không thảo luận về chính trị, tôn giáo hoặc các chủ đề nhạy cảm
+4. Không đưa ra lời khuyên y tế chuyên nghiệp
+5. Không chia sẻ thông tin cá nhân của khách hàng
+6. Luôn khuyến khích khách hàng mua sắm trên website`
+
 class GeminiService {
     constructor() {
         this.genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
@@ -20,7 +33,7 @@ class GeminiService {
                     { name: { $regex: query, $options: 'i' } },
                     { description: { $regex: query, $options: 'i' } },
                 ],
-            }).exec();
+            }).limit(10).exec();
             return results;
         } catch (error) {
             console.error('Lỗi tìm kiếm sản phẩm:', error);
@@ -28,21 +41,154 @@ class GeminiService {
         }
     }
 
-    // async ask(question) {
-    //     try {
-    //         const response = await this.model.generateContent(question);
-    //         return response.response.text();
-    //     } catch (error) {
-    //         console.error("Lỗi gọi Gemini API:", error);
-    //         throw new Error("Không thể lấy phản hồi từ Gemini.");
-    //     }
-    // }
-
-    async ask(message, productInfo = null) {
+    async getPreviousMessages(userId, limit = 10) {
         try {
-            const prompt = productInfo
-                ? `Khách hàng hỏi: '${message}'. Thông tin sản phẩm: ${productInfo}. Trả lời ngắn gọn, thân thiện và hữu ích, như một chatbot thương mại điện tử.`
-                : `Khách hàng hỏi: '${message}'. Trả lời ngắn gọn, thân thiện và tự nhiên, như một chatbot thương mại điện tử.`;
+            // Find user's conversation
+            const conversation = await Conversation.findOne({
+                type: 'chatbot',
+                members: [userId],
+            });
+
+            if (!conversation) {
+                return [];
+            }
+
+            // Get the most recent messages
+            const messages = await Message.find({
+                conversationId: conversation._id,
+            })
+                .sort({ timestamp: -1 })
+                .limit(limit)
+                .select('sender content')
+                .exec();
+
+            // Return in chronological order
+            return messages.reverse();
+        } catch (error) {
+            console.error('Error getting previous messages:', error);
+            return [];
+        }
+    }
+
+    async getUserContext(userId) {
+        try {
+            if (!userId) return null;
+
+            // Get basic user information
+            const user = await User.findById(userId).select('name gender role favoriteProducts');
+
+            if (!user) return null;
+
+            // Get user's purchase history summary
+            const orders = await Order.find({ user: userId })
+                .sort({ createdAt: -1 })
+                .limit(5)
+                .populate('products.product', 'name category');
+
+            // Create user context object
+            const userContext = {
+                name: user.name || 'Khách hàng',
+                gender: user.gender || 'không xác định',
+                role: user.role,
+                favoriteCategories: [],
+                purchaseHistory: []
+            };
+
+            // Extract favorite categories from orders
+            if (orders && orders.length > 0) {
+                const categoryMap = new Map();
+
+                // Process orders to find frequently purchased categories
+                orders.forEach(order => {
+                    order.products.forEach(item => {
+                        if (item.product && item.product.category) {
+                            const category = item.product.category.toString();
+                            categoryMap.set(category, (categoryMap.get(category) || 0) + 1);
+                        }
+                    });
+
+                    // Add order to purchase history
+                    userContext.purchaseHistory.push({
+                        date: order.createdAt,
+                        products: order.products.map(p => p.product?.name || 'Sản phẩm')
+                    });
+                });
+
+                // Get top categories
+                userContext.favoriteCategories = [...categoryMap.entries()]
+                    .sort((a, b) => b[1] - a[1])
+                    .slice(0, 3)
+                    .map(entry => entry[0]);
+            }
+
+            return userContext;
+        } catch (error) {
+            console.error('Lỗi khi lấy thông tin người dùng:', error);
+            return null;
+        }
+    }
+
+    async ask(message, productInfo = null, userId = null) {
+        try {
+            let contextMessages = [];
+            let userContext = null;
+
+            // Get user context if userId is provided
+            if (userId) {
+                userContext = await this.getUserContext(userId);
+                const previousMessages = await this.getPreviousMessages(userId);
+                if (previousMessages.length > 0) {
+                    contextMessages = previousMessages.map(msg => {
+                        const role = msg.sender.toString() === this.chatbotId.toString() ? 'assistant' : 'user';
+                        return `${role}: ${msg.content}`;
+                    }).join('\n');
+                }
+            }
+
+            // Build optimized prompt with context
+            let prompt = "";
+
+            // System instruction part
+            prompt += SYSTEM_INSTRUCTIONS + "\n\n";
+
+            // User context part
+            if (userContext) {
+                prompt += `Thông tin về khách hàng:\n`;
+                prompt += `- Tên: ${userContext.name}\n`;
+                prompt += `- Giới tính: ${userContext.gender}\n`;
+
+                if (userContext.favoriteCategories && userContext.favoriteCategories.length > 0) {
+                    prompt += `- Danh mục quan tâm: ${userContext.favoriteCategories.join(', ')}\n`;
+                }
+
+                if (userContext.purchaseHistory && userContext.purchaseHistory.length > 0) {
+                    prompt += `- Đã từng mua: ${userContext.purchaseHistory.flatMap(order => order.products).slice(0, 3).join(', ')}\n`;
+                }
+                prompt += '\n';
+            }
+
+            // Previous conversation context
+            if (contextMessages.length > 0) {
+                prompt += `Đây là các tin nhắn trò chuyện gần đây:\n${contextMessages}\n\n`;
+                prompt += `Khách hàng hỏi tiếp: '${message}'.\n\n`;
+            } else {
+                prompt += `Khách hàng hỏi: '${message}'.\n\n`;
+            }
+
+            // Product information
+            if (productInfo) {
+                prompt += `Thông tin sản phẩm liên quan:\n${productInfo}\n\n`;
+            }
+
+            // Response instructions
+            prompt += "Hãy trả lời như một trợ lý mua sắm chuyên nghiệp, tập trung vào yêu cầu hiện tại của khách hàng. ";
+            prompt += "Trả lời ngắn gọn trong 1-3 câu, thân thiện, và hữu ích. ";
+            if (userContext) {
+                prompt += `Hãy gọi khách hàng là "${userContext.gender === 'male' ? 'anh' : (userContext.gender === 'female' ? 'chị' : 'bạn')}" nếu phù hợp. `;
+            }
+            prompt += "Không cần giới thiệu bản thân lại mỗi lần trả lời.";
+
+            console.log('Prompt:', prompt);
 
             const timeout = 10000; // 10 giây
             const timeoutPromise = new Promise((_, reject) => {
@@ -59,7 +205,7 @@ class GeminiService {
         }
     }
 
-    async consultProduct(productIds, question) {
+    async consultProduct(productIds, question, userId = null) {
         try {
             const products = await Product.find({
                 _id: { $in: productIds },
@@ -70,11 +216,70 @@ class GeminiService {
             }
 
             const productInfo = products
-                .map((p) => `- ${p.name}: ${p.priceAfterSale} VND, còn ${p.inStock} hàng`)
+                .map((p) => `- ${p.name}: ${p.priceAfterSale} VND, còn ${p.inStock} hàng, mô tả: ${p.description ? p.description.substring(0, 100) + '...' : 'Không có mô tả'}`)
                 .join('\n');
 
-            // Gửi câu hỏi và thông tin sản phẩm tới Gemini
-            const prompt = `Khách hàng hỏi: '${question}'. Thông tin sản phẩm: ${productInfo}. Trả lời ngắn gọn, thân thiện và hữu ích, như một chatbot thương mại điện tử.`;
+            let contextMessages = [];
+            let userContext = null;
+
+            // Get user context and previous messages if userId is provided
+            if (userId) {
+                userContext = await this.getUserContext(userId);
+                const previousMessages = await this.getPreviousMessages(userId);
+                if (previousMessages.length > 0) {
+                    contextMessages = previousMessages.map(msg => {
+                        const role = msg.sender.toString() === this.chatbotId.toString() ? 'assistant' : 'user';
+                        return `${role}: ${msg.content}`;
+                    }).join('\n');
+                }
+            }
+
+            // Build optimized prompt with context
+            let prompt = "";
+
+            // System instruction part
+            prompt += SYSTEM_INSTRUCTIONS + "\n\n";
+
+            // User context part
+            if (userContext) {
+                prompt += `Thông tin về khách hàng:\n`;
+                prompt += `- Tên: ${userContext.name}\n`;
+                prompt += `- Giới tính: ${userContext.gender}\n`;
+
+                if (userContext.favoriteCategories && userContext.favoriteCategories.length > 0) {
+                    prompt += `- Danh mục quan tâm: ${userContext.favoriteCategories.join(', ')}\n`;
+                }
+
+                if (userContext.purchaseHistory && userContext.purchaseHistory.length > 0) {
+                    prompt += `- Đã từng mua: ${userContext.purchaseHistory.flatMap(order => order.products).slice(0, 3).join(', ')}\n`;
+                }
+                prompt += '\n';
+            }
+
+            // Previous conversation context
+            if (contextMessages.length > 0) {
+                prompt += `Đây là các tin nhắn trò chuyện gần đây:\n${contextMessages}\n\n`;
+                prompt += `Khách hàng hỏi tiếp về sản phẩm: '${question}'.\n\n`;
+            } else {
+                prompt += `Khách hàng hỏi về sản phẩm: '${question}'.\n\n`;
+            }
+
+            // Product information
+            prompt += `Thông tin chi tiết sản phẩm:\n${productInfo}\n\n`;
+
+            // Response instructions
+            prompt += "Hãy trả lời như một tư vấn viên sản phẩm chuyên nghiệp, tập trung vào yêu cầu hiện tại của khách hàng. ";
+            prompt += "Trả lời ngắn gọn trong 1-3 câu, tập trung vào đặc điểm nổi bật của sản phẩm và giải đáp thắc mắc cụ thể. ";
+
+            if (userContext) {
+                prompt += `Hãy gọi khách hàng là "${userContext.gender === 'male' ? 'anh' : (userContext.gender === 'female' ? 'chị' : 'bạn')}" nếu phù hợp. `;
+            }
+
+            prompt += "Không nói quá nhiều về thông số kỹ thuật, trừ khi khách hàng hỏi cụ thể. ";
+            prompt += "Khuyến khích mua hàng một cách tinh tế, không quá gượng ép.";
+
+            console.log('Prompt:', prompt);
+
             const timeout = 10000;
             const timeoutPromise = new Promise((_, reject) => {
                 setTimeout(() => reject(new Error('Gemini API phản hồi quá lâu')), timeout);
@@ -112,9 +317,6 @@ class GeminiService {
             const userMessage = new Message({
                 conversationId: conversation._id,
                 sender: userId,
-                // content: endpoint === 'chat'
-                //     ? userInput.message
-                //     : `${userInput.question} (productIds: [${userInput.productIds || []}])`,
                 content: userInput.question || userInput.message,
                 isDelivered: true,
             });
@@ -122,7 +324,7 @@ class GeminiService {
 
             // Lưu câu trả lời của chatbot
             const botMessageContent = endpoint === 'chat' && botResponse.productIds.length > 0
-                ? `${botResponse.response} (productIds: [${botResponse.productIds}])`
+                ? `${botResponse.response}`
                 : botResponse.response;
 
             const botMessage = new Message({
@@ -130,6 +332,7 @@ class GeminiService {
                 sender: this.chatbotId,
                 content: botMessageContent,
                 isDelivered: true,
+                productIds: botResponse.productIds || [], // Lưu danh sách ID sản phẩm liên quan
             });
             await botMessage.save();
 
@@ -155,7 +358,8 @@ class GeminiService {
             const messages = await Message.find({
                 conversationId: conversation._id,
             })
-                .select('sender content timestamp')
+                .select('sender content timestamp productIds')
+                .populate('productIds', 'id name thumbnail price priceAfterSale image')
                 .sort({ timestamp: 1 })
                 .exec();
 
@@ -163,6 +367,13 @@ class GeminiService {
                 sender: msg.sender.toString(),
                 content: msg.content,
                 timestamp: msg.timestamp,
+                productDetails: msg.productIds.map(product => ({
+                    id: product._id.toString(),
+                    name: product.name,
+                    thumbnail: product.thumbnail || product.image[0] || null,
+                    price: product.price,
+                    priceAfterSale: product.priceAfterSale
+                }))
             }));
         } catch (error) {
             console.error('Lỗi lấy lịch sử trò chuyện:', error);
