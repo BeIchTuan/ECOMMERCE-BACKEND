@@ -8,14 +8,26 @@ const Order = require("../models/OrderModel");
 const mongoose = require("mongoose");
 
 const SYSTEM_INSTRUCTIONS = `
-Bạn là trợ lý chatbot chuyên nghiệp cho website thương mại điện tử Phố Mua Sắm.
-Hãy tuân theo các hướng dẫn sau:
-1. Trả lời ngắn gọn, chuyên nghiệp và thân thiện
-2. Tập trung vào thông tin sản phẩm và mua sắm
-3. Không thảo luận về chính trị, tôn giáo hoặc các chủ đề nhạy cảm
-4. Không đưa ra lời khuyên y tế chuyên nghiệp
-5. Không chia sẻ thông tin cá nhân của khách hàng
-6. Luôn khuyến khích khách hàng mua sắm trên website`
+Bạn là trợ lý chat thông minh và thân thiện của website thương mại điện tử Phố Mua Sắm.
+Hãy tương tác như một nhân viên tư vấn mua sắm nhiệt tình:
+1. Trò chuyện tự nhiên, thân thiện và gần gũi như con người thật.
+2. Tư vấn chi tiết về sản phẩm, bao gồm các ưu đãi, khuyến mãi và mã giảm giá đang áp dụng.
+3. Luôn nhắc khách hàng về các chương trình giảm giá hoặc voucher hiện có nếu phù hợp với sản phẩm.
+4. Tránh hoàn toàn các chủ đề nhạy cảm như chính trị, tôn giáo, hay vấn đề xã hội gây tranh cãi.
+5. Không đưa ra lời khuyên y tế, pháp lý hoặc tài chính chuyên môn.
+6. Bảo vệ an toàn thông tin cá nhân của khách hàng.
+7. Không bịa ra nhưng thông tin không có thật, không cung cấp thông tin sai lệch về sản phẩm hoặc dịch vụ.
+8. Nếu khách hàng hỏi về sản phẩm không có trong kho, hãy đề xuất các sản phẩm tương tự hoặc liên quan.
+9. Nếu khách hàng hỏi không liên quan đến sản phẩm, hãy trả lời một cách lịch sự và chuyển hướng về sản phẩm hoặc dịch vụ của bạn.`
+
+const RESPONSE_INSTRUCTIONS = `
+Trả lời với giọng điệu tự nhiên và thân thiện như một nhân viên tư vấn bán hàng thực sự:
+1. Sử dụng ngôn ngữ đời thường, chuyên nghiệp và có cảm xúc (thêm emoji vui vẻ, tích cực nếu phù hợp)
+2. Nhắc đến các khuyến mãi và mã giảm giá đang áp dụng cho sản phẩm khách hàng quan tâm, nếu đã nhắc trước đó về sản phẩm thì hạn chế nhắc lại
+3. Gợi ý các mức giảm giá theo từng cấp độ (ví dụ: giảm 5% cho đơn từ 200k, 10% cho đơn từ 500k)
+4. Nhấn mạnh về thời gian còn lại của khuyến mãi để tạo cảm giác cấp bách (nếu có)
+5. Đề xuất các sản phẩm bổ sung có liên quan để tăng giá trị đơn hàng
+6. Trả lời ngắn gọn trong 2-4 câu trừ khi cần thiết phải chi tiết hơn`
 
 class GeminiService {
     constructor() {
@@ -181,12 +193,10 @@ class GeminiService {
             }
 
             // Response instructions
-            prompt += "Hãy trả lời như một trợ lý mua sắm chuyên nghiệp, tập trung vào yêu cầu hiện tại của khách hàng. ";
-            prompt += "Trả lời ngắn gọn trong 1-3 câu, thân thiện, và hữu ích. ";
             if (userContext) {
                 prompt += `Hãy gọi khách hàng là "${userContext.gender === 'male' ? 'anh' : (userContext.gender === 'female' ? 'chị' : 'bạn')}" nếu phù hợp. `;
             }
-            prompt += "Không cần giới thiệu bản thân lại mỗi lần trả lời.";
+            prompt += RESPONSE_INSTRUCTIONS + "\n\n";
 
             console.log('Prompt:', prompt);
 
@@ -209,15 +219,40 @@ class GeminiService {
         try {
             const products = await Product.find({
                 _id: { $in: productIds },
-            }).exec();
+            }).populate('seller', 'shopName').exec();
 
             if (products.length === 0) {
                 return "Xin lỗi, không tìm thấy sản phẩm nào với ID bạn cung cấp!";
             }
 
-            const productInfo = products
-                .map((p) => `- ${p.name}: ${p.priceAfterSale} VND, còn ${p.inStock} hàng, mô tả: ${p.description ? p.description.substring(0, 100) + '...' : 'Không có mô tả'}`)
-                .join('\n');
+            // Lấy thông tin khuyến mãi của các sản phẩm từ người bán
+            const sellerIds = [...new Set(products.map(p => p.seller?._id))].filter(Boolean);
+            const currentDate = new Date();
+
+            // Lấy thông tin giảm giá/voucher từ DiscountModel
+            const Discount = require('../models/DiscountModel');
+            const discounts = await Discount.find({
+                seller: { $in: sellerIds },
+                expireDate: { $gt: currentDate },
+                usageLimit: { $gt: 0 }
+            }).lean();
+
+            // Tạo thông tin sản phẩm chi tiết kèm khuyến mãi
+            const productInfo = products.map((p) => {
+                // Tìm các khuyến mãi áp dụng cho shop của sản phẩm này
+                const shopDiscounts = discounts.filter(d => d.seller.toString() === p.seller?._id.toString());
+
+                let discountInfo = '';
+                if (shopDiscounts && shopDiscounts.length > 0) {
+                    discountInfo = '\n    Ưu đãi hiện có: ' + shopDiscounts.map(d =>
+                        `Mã "${d.code}": Giảm ${d.discountInPercent}% (tối đa ${d.maxDiscountValue?.toLocaleString('vi-VN')} VND) cho đơn từ ${d.minOrderValue?.toLocaleString('vi-VN')} VND, còn ${Math.round((d.expireDate - currentDate) / (1000 * 60 * 60 * 24))} ngày`
+                    ).join('; ');
+                }
+
+                return `- ${p.name}: ${p.priceAfterSale.toLocaleString('vi-VN')} VND${p.price !== p.priceAfterSale ? ' (Giảm từ ' + p.price.toLocaleString('vi-VN') + ' VND)' : ''}, còn ${p.inStock} hàng
+    Shop: ${p.seller?.shopName || 'Không có thông tin'} ${discountInfo}
+    Mô tả: ${p.description ? p.description : 'Không có mô tả'}`;
+            }).join('\n\n');
 
             let contextMessages = [];
             let userContext = null;
@@ -264,19 +299,17 @@ class GeminiService {
                 prompt += `Khách hàng hỏi về sản phẩm: '${question}'.\n\n`;
             }
 
-            // Product information
-            prompt += `Thông tin chi tiết sản phẩm:\n${productInfo}\n\n`;
+            // Product information with promotions
+            prompt += `Thông tin chi tiết sản phẩm (đã bao gồm giá giảm và khuyến mãi):\n${productInfo}\n\n`;
+
+            // Bổ sung gợi ý về cách giới thiệu khuyến mãi
+            prompt += `Hãy nhớ nhắc khách hàng về các ưu đãi đang có. Khuyến khích khách hàng sử dụng mã giảm giá nếu phù hợp.\n\n`;
 
             // Response instructions
-            prompt += "Hãy trả lời như một tư vấn viên sản phẩm chuyên nghiệp, tập trung vào yêu cầu hiện tại của khách hàng. ";
-            prompt += "Trả lời ngắn gọn trong 1-3 câu, tập trung vào đặc điểm nổi bật của sản phẩm và giải đáp thắc mắc cụ thể. ";
-
             if (userContext) {
                 prompt += `Hãy gọi khách hàng là "${userContext.gender === 'male' ? 'anh' : (userContext.gender === 'female' ? 'chị' : 'bạn')}" nếu phù hợp. `;
             }
-
-            prompt += "Không nói quá nhiều về thông số kỹ thuật, trừ khi khách hàng hỏi cụ thể. ";
-            prompt += "Khuyến khích mua hàng một cách tinh tế, không quá gượng ép.";
+            prompt += RESPONSE_INSTRUCTIONS + "\n\n";
 
             console.log('Prompt:', prompt);
 
