@@ -51,23 +51,24 @@ class ConversationController {
   async getUserConversations(req, res) {
     try {
       const userId = req.id;
-      // Tìm tất cả các cuộc hội thoại mà user là thành viên
       const conversations = await Conversation.find({
         members: { $in: [userId] },
       })
         .populate({
           path: "members",
-          select: "name shopName avatar role", // Chỉ lấy name và avatar của các thành viên
+          select: "name shopName avatar role",
         })
-        .lean(); // Sử dụng lean() để kết quả là plain JavaScript objects
+        .lean();
 
-      // Lọc và lấy thông tin người nhận cho mỗi cuộc hội thoại
-      const conversationsWithRecipientInfo = conversations.map(
-        (conversation) => {
-          // Lọc để lấy người nhận (khác với user hiện tại)
+      // Filter out conversations where recipient exists and map the data
+      const conversationsWithRecipientInfo = conversations
+        .map((conversation) => {
           const recipient = conversation.members.find(
-            (member) => member._id.toString() !== userId
+            (member) => member && member._id && member._id.toString() !== userId
           );
+
+          // Skip this conversation if recipient is null or undefined
+          if (!recipient) return null;
 
           return {
             conversationId: conversation._id,
@@ -75,10 +76,9 @@ class ConversationController {
             recipientName:
               recipient.role === "seller" ? recipient.shopName : recipient.name,
             recipientAvatar: recipient.avatar,
-            //lastMessage: conversation.lastMessage, // Thêm tin nhắn cuối cùng nếu có
           };
-        }
-      );
+        })
+        .filter(conv => conv !== null); // Remove null entries
 
       return res.status(200).json({
         status: "success",
@@ -98,23 +98,25 @@ class ConversationController {
     
     try {
       const { userId } = requestData;
-      // Tìm tất cả các cuộc hội thoại mà user là thành viên
+// Tìm tất cả các cuộc hội thoại mà user là thành viên
       const conversations = await Conversation.find({
         members: { $in: [userId] },
       })
         .populate({
           path: "members",
-          select: "name shopName avatar role", // Chỉ lấy name và avatar của các thành viên
+          select: "name shopName avatar role",
         })
-        .lean(); // Sử dụng lean() để kết quả là plain JavaScript objects
+        .lean();
 
-      // Lọc và lấy thông tin người nhận cho mỗi cuộc hội thoại
-      const conversationsWithRecipientInfo = conversations.map(
-        (conversation) => {
-          // Lọc để lấy người nhận (khác với user hiện tại)
+      // Filter out conversations where recipient exists and map the data
+      const conversationsWithRecipientInfo = conversations
+        .map((conversation) => {
           const recipient = conversation.members.find(
-            (member) => member._id.toString() !== userId
+            (member) => member && member._id && member._id.toString() !== userId
           );
+
+          // Skip this conversation if recipient is null or undefined
+          if (!recipient) return null;
 
           return {
             conversationId: conversation._id,
@@ -122,10 +124,9 @@ class ConversationController {
             recipientName:
               recipient.role === "seller" ? recipient.shopName : recipient.name,
             recipientAvatar: recipient.avatar,
-            //lastMessage: conversation.lastMessage, // Thêm tin nhắn cuối cùng nếu có
           };
-        }
-      );
+        })
+        .filter(conv => conv !== null); // Remove null entries
 
       return ws.send(
         JSON.stringify({
