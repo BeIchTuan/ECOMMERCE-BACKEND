@@ -553,8 +553,7 @@ class OrderService {
     // Kiểm tra nếu đã có link thanh toán
     if (order.paymentData && order.paymentData.payUrl) {
       return {
-        message: "Payment link already exists",
-        data: order.paymentData,
+        ...order.paymentData,
       };
     }
 
@@ -581,7 +580,7 @@ class OrderService {
       // Tạo điều kiện tìm kiếm cơ bản cho người bán
       const query = {
         "items.sellerId": sellerId,
-        paymentStatus: "success",
+        //paymentStatus: "success",
         "paymentMethod": "680888d38bb3b5b4d57ca2db" // ID của phương thức thanh toán Momo
       };
 
@@ -614,8 +613,9 @@ class OrderService {
           item.sellerId.toString() === sellerId.toString()
         );
 
+
         for (const item of sellerItems) {
-          orderRevenue += item.priceAfterSale * item.quantity;
+          orderRevenue += item.price * item.quantity;
         }
 
         if (orderRevenue > 0) {
