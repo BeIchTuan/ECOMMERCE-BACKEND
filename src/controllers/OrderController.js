@@ -209,6 +209,23 @@ class OrderController {
       res.status(400).json({ error: error.message });
     }
   }
+
+  async payWithMomo(req, res) {
+    try {
+      const { id } = req.body;
+      console.log("id: ", id)
+      if (!id) {
+        return res.status(400).json({ error: "Order ID is required" });
+      }
+
+      const paymentResult = await OrderService.payWithMomo(id);
+      
+      return res.status(200).json({ message: "Payment created successfully", data: paymentResult });
+    } catch (error) {
+      console.error(error.message);
+      return res.status(500).json({ error: error.message });
+    }
+  }
 }
 
 module.exports = new OrderController();

@@ -22,5 +22,7 @@ router.get("/orders/:id", authMiddleware(['user', 'seller']), OrderController.ge
 router.get("/seller/orders", authMiddleware(['seller']), OrderController.getOrdersBySeller);
 router.put("/orders/:orderId/status", authMiddleware(['user', 'seller']), OrderController.updateOrderStatus);
 
+router.post("/orders/momo", authMiddleware(['user']), OrderController.payWithMomo);
+
 
 module.exports = router;

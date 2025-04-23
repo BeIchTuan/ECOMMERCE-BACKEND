@@ -4,6 +4,8 @@ const Discount = require("../models/DiscountModel");
 const Rate = require("../models/RateModel");
 const User = require("../models/UserModel");
 const { sendOrderConfirmationEmail } = require("./EmailService");
+const MomoService = require("./MomoService");
+const momoConfig = require("../config/MomoConfig");
 
 class OrderService {
   async getOrders(
@@ -536,6 +538,30 @@ class OrderService {
         throw new Error("Invalid delivery method");
     }
     return shippingCost;
+  }
+
+  async payWithMomo(orderId) {
+    const order = await Order.findById(orderId);
+    if (!order) {
+      throw new Error("order not found");
+    }
+
+    const amount = order.totalPrice; 
+
+    const orderInfo = `Thanh toán hóa đơn`;
+    const redirectUrl = momoConfig.REDIRECT_URL;
+    const paymentResult = await MomoService.createPayment(
+      amount,
+      orderInfo,
+      redirectUrl
+    );
+
+    await Order.findByIdAndUpdate(orderId, {
+      paymentData: paymentResult,
+    });
+
+    // Return the first payment result
+    return paymentResult;
   }
 }
 
