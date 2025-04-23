@@ -508,9 +508,13 @@ class OrderService {
         items: order.items,
       };
 
-      console.log(order.items)
+      console.log(order.items);
 
-      await sendOrderConfirmationEmail(emailDetails, order.userId.email, order.deliveryStatus);
+      await sendOrderConfirmationEmail(
+        emailDetails,
+        order.userId.email,
+        order.deliveryStatus
+      );
 
       return { success: true };
     } catch (error) {
@@ -543,25 +547,109 @@ class OrderService {
   async payWithMomo(orderId) {
     const order = await Order.findById(orderId);
     if (!order) {
-      throw new Error("order not found");
+      throw new Error("Order not found");
     }
 
-    const amount = order.totalPrice; 
+    // Kiểm tra nếu đã có link thanh toán
+    if (order.paymentData && order.paymentData.payUrl) {
+      return {
+        message: "Payment link already exists",
+        data: order.paymentData,
+      };
+    }
 
+    const amount = order.totalPrice;
     const orderInfo = `Thanh toán hóa đơn`;
     const redirectUrl = momoConfig.REDIRECT_URL;
+
+    // Tạo link thanh toán mới
     const paymentResult = await MomoService.createPayment(
       amount,
       orderInfo,
       redirectUrl
     );
 
-    await Order.findByIdAndUpdate(orderId, {
-      paymentData: paymentResult,
-    });
+    // Lưu thông tin thanh toán vào đơn hàng
+    order.paymentData = paymentResult;
+    await order.save();
 
-    // Return the first payment result
     return paymentResult;
+  }
+
+  async getSellerMomoRevenue(sellerId, startDate, endDate) {
+    try {
+      // Tạo điều kiện tìm kiếm cơ bản cho người bán
+      const query = {
+        "items.sellerId": sellerId,
+        paymentStatus: "success",
+        "paymentMethod": "680888d38bb3b5b4d57ca2db" // ID của phương thức thanh toán Momo
+      };
+
+      // Thêm điều kiện về thời gian nếu có
+      if (startDate || endDate) {
+        query.createdAt = {};
+        if (startDate) {
+          query.createdAt.$gte = new Date(startDate);
+        }
+        if (endDate) {
+          query.createdAt.$lte = new Date(endDate);
+        }
+      }
+
+      // Tìm tất cả đơn hàng thỏa mãn điều kiện
+      const orders = await Order.find(query)
+        .populate({
+          path: "items.productId",
+          select: "name price priceAfterSale"
+        });
+
+      // Tính toán tổng doanh thu
+      let totalRevenue = 0;
+      const orderDetails = [];
+
+      for (const order of orders) {
+        // Tính tổng giá trị các sản phẩm của người bán trong đơn hàng này
+        let orderRevenue = 0;
+        const sellerItems = order.items.filter(item => 
+          item.sellerId.toString() === sellerId.toString()
+        );
+
+        for (const item of sellerItems) {
+          orderRevenue += item.priceAfterSale * item.quantity;
+        }
+
+        if (orderRevenue > 0) {
+          totalRevenue += orderRevenue;
+          orderDetails.push({
+            orderId: order._id,
+            orderDate: order.createdAt,
+            revenue: orderRevenue,
+            items: sellerItems.map(item => ({
+              productName: item.productId.name,
+              quantity: item.quantity,
+              price: item.price,
+              subtotal: item.price * item.quantity
+            }))
+          });
+        }
+      }
+
+      return {
+        success: true,
+        data: {
+          totalRevenue,
+          orderCount: orderDetails.length,
+          orders: orderDetails
+        }
+      };
+    } catch (error) {
+      console.error("Error calculating Momo revenue:", error);
+      return {
+        success: false,
+        message: "Failed to calculate Momo revenue",
+        error: error.message
+      };
+    }
   }
 }
 

@@ -1,4 +1,5 @@
 const revenueService = require("../services/RevenueService");
+const OrderService = require("../services/OrderService");
 
 class RevenueController {
   // API: Xem báo cáo doanh thu
@@ -44,6 +45,27 @@ class RevenueController {
         status: "error",
         message: "Failed to fetch revenue chart report",
         err: error,
+      });
+    }
+  }
+
+  async getMomoRevenue(req, res) {
+    try {
+      const sellerId = req.id;
+      const { startDate, endDate } = req.query;
+      
+      const result = await OrderService.getSellerMomoRevenue(sellerId, startDate, endDate);
+      
+      if (result.success) {
+        res.status(200).json(result);
+      } else {
+        res.status(500).json(result);
+      }
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: "Error retrieving Momo revenue",
+        error: error.message
       });
     }
   }

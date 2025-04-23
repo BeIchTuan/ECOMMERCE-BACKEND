@@ -47,7 +47,12 @@ const orderSchema = new Schema(
       enum: ["pending", "preparing", "delivering", "delivered", "success"],
       default: "pending",
     },
-
+    paymentData: {
+      orderId: { type: String },
+      payUrl: { type: String },
+      deeplink: { type: String },
+      qrCodeUrl: { type: String },
+    },
     discount: { type: Schema.Types.ObjectId, ref: "Discount" }, // Thêm discount
     createdAt: { type: Date, default: Date.now },
   },

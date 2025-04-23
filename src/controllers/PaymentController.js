@@ -47,6 +47,18 @@ class PaymentController {
         `Updated payment status from ${oldStatus} to ${order.paymentStatus}`
       );
 
+      // Cập nhật phương thức thanh toán thành momo nếu thanh toán thành công
+      if (resultCode === 0) {
+        order.paymentMethod = {
+          id: "momo-wallet",
+          name: "Ví MoMo",
+          description: "Thanh toán qua ví điện tử MoMo",
+          icon: "MoMoIcon"
+        }; // Đặt object của phương thức thanh toán là momo-wallet
+        await order.save();
+        console.log("Updated payment method to MoMo object");
+      }
+
     // Gửi email nếu thanh toán thành công
     //   if (resultCode === 0) {
     //     try {
