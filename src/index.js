@@ -1,7 +1,6 @@
 const express = require('express');
 const dotenv = require('dotenv');
 const morgan = require('morgan');
-// const { MongoClient } = require('mongodb');
 const routes = require('./routes');
 const app = express();
 const bodyParser = require('body-parser');
@@ -9,20 +8,35 @@ const mongoose = require('mongoose');
 const cookieParser = require('cookie-parser');
 const cors = require("cors");
 
-//Websocket
-const http = require('http')
-const { Server } = require('ws');
+// HTTP & WebSocket servers
+const http = require('http');
+const { Server: WebSocketServer } = require('ws');
+const { Server: SocketIOServer } = require('socket.io');
 const websocketServer = require('./websocketServer');
+const signalingServer = require('./signalingServer');
+const { setIO } = require('./socketServerLive');
 
 dotenv.config();
 app.use(morgan('combined'));
-
 app.use(cookieParser());
 
+// Create HTTP server
 const server = http.createServer(app);
-// Khởi tạo WebSocket server và tích hợp với server HTTP
-const wss = new Server({ server });
-websocketServer(wss); // Truyền WebSocket server vào file websocketServer.js
+
+// Initialize WebSocket server
+const wss = new WebSocketServer({ server });
+websocketServer(wss);
+
+// Initialize Socket.IO server for livestream
+const io = new SocketIOServer(server, {
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"]
+  }
+});
+
+// Share io instance with socketServerLive
+setIO(io);
 
 const allowedOrigins = ["http://localhost:5173", "http://localhost:5174"];
 
@@ -36,11 +50,13 @@ app.use(
         callback(new Error("Not allowed by CORS"));
       }
     },
-    credentials: true, // Cho phép gửi cookie
+    credentials: true,
   })
 );
 
 const port = process.env.PORT || 3001;
+const wsPort = process.env.WS_PORT || 8081;
+
 app.use(bodyParser.json());
 
 app.get('/', (req, res) => {
@@ -52,9 +68,14 @@ routes(app);
 mongoose.connect(process.env.MONGO_URI)
   .then(() => {
     console.log('Mongoose connected to MongoDB');
-    // Now, you can safely start your server and perform database operations
     server.listen(port, () => {
       console.log(`App listening on port ${port}`);
+      console.log('Socket.IO server is ready');
+    });
+    
+    // Start signaling server on port 8081
+    signalingServer.listen(wsPort, () => {
+      console.log(`Signaling WebSocket server is listening on port ${wsPort}`);
     });
   })
   .catch(err => {

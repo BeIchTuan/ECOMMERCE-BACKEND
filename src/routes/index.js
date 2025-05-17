@@ -8,6 +8,7 @@ const RateRouter = require('./RateRouter')
 const DiscountRouter = require('./DiscountRouter')
 const RevenueRouter = require('./RevenueRouter')
 const PaymentRouter = require('./PaymentRouter')
+const LivestreamRouter = require('./LivestreamRouter')
 
 const routes = (app) => {
     app.use('/', UserRouter)
@@ -20,6 +21,7 @@ const routes = (app) => {
     app.use('/', DiscountRouter)
     app.use('/', RevenueRouter)
     app.use('/', PaymentRouter)
+    app.use('/', LivestreamRouter)
 }
 
 module.exports = routes
