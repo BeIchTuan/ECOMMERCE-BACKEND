@@ -632,7 +632,11 @@ class GeminiService {
 
             const responsePromise = this.model.generateContent(prompt);
             const result = await Promise.race([responsePromise, timeoutPromise]);
-            const responseText = await result.response.text();
+            let responseText = await result.response.text();
+
+            responseText = responseText
+                .replace(/```json\s*/, '')
+                .replace(/```\s*$/, '');
 
             // Parse the JSON response
             try {
@@ -731,7 +735,11 @@ class GeminiService {
 
             const responsePromise = this.model.generateContent(prompt);
             const result = await Promise.race([responsePromise, timeoutPromise]);
-            const responseText = await result.response.text();
+            let responseText = await result.response.text();
+
+            responseText = responseText
+                .replace(/```json\s*/, '')
+                .replace(/```\s*$/, '');
 
             // Parse the JSON response
             try {
