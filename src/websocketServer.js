@@ -20,40 +20,50 @@ class ChatService {
 
     // Đăng ký sự kiện message và close cho WebSocket kết nối mới
     ws.on("message", async (data) => {
-      const messageData = JSON.parse(data);
+      try {
+        // Kiểm tra nếu message là "2probe" hoặc "3probe" từ Engine.IO
+        if (data.toString() === "2probe" || data.toString() === "3probe") {
+          return;
+        }
 
-      // Kiểm tra loại tin nhắn
-      if (messageData.type === "register") {
-        const userId = messageData.userId;
+        const messageData = JSON.parse(data);
 
-        // Lưu trữ client với userId
-        this.addClient(userId, ws);
-        console.log(`User registered with ID: ${userId}`);
+        // Kiểm tra loại tin nhắn
+        if (messageData.type === "register") {
+          const userId = messageData.userId;
 
-        // Sau khi đăng ký, kiểm tra các tin nhắn chưa được gửi
-        const unreadMessages = await Message.find({
-          recipientId: userId,
-          isDelivered: false,
-        });
+          // Lưu trữ client với userId
+          this.addClient(userId, ws);
+          console.log(`User registered with ID: ${userId}`);
 
-        unreadMessages.forEach(async (msg) => {
-          ws.send(
-            JSON.stringify({
-              type: "chatMessage",
-              conversationId: msg.conversationId,
-              sender: msg.sender,
-              content: msg.content,
-              timestamp: msg.timestamp,
-            })
-          );
+          // Sau khi đăng ký, kiểm tra các tin nhắn chưa được gửi
+          const unreadMessages = await Message.find({
+            recipientId: userId,
+            isDelivered: false,
+          });
 
-          // Cập nhật trạng thái tin nhắn là đã gửi
-          msg.isDelivered = true;
-          await msg.save();
-        });
-      } else {
-        // Xử lý các tin nhắn khác (ví dụ: tin nhắn chat)
-        this.handleMessage(ws, data);
+          unreadMessages.forEach(async (msg) => {
+            ws.send(
+              JSON.stringify({
+                type: "chatMessage",
+                conversationId: msg.conversationId,
+                sender: msg.sender,
+                content: msg.content,
+                timestamp: msg.timestamp,
+              })
+            );
+
+            // Cập nhật trạng thái tin nhắn là đã gửi
+            msg.isDelivered = true;
+            await msg.save();
+          });
+        } else {
+          // Xử lý các tin nhắn khác (ví dụ: tin nhắn chat)
+          this.handleMessage(ws, data);
+        }
+      } catch (error) {
+        console.log('Invalid message format:', data.toString());
+        // Don't throw error for non-JSON messages
       }
     });
 

@@ -5,6 +5,7 @@ const router = express.Router();
 
 // Public routes
 router.get('/livestreams', LivestreamController.getLivestreams);
+router.get('/livestreams/:id', authMiddleware(["user", "seller"]), LivestreamController.getStreamInfo);
 
 // Seller only routes - single middleware usage
 router.post('/livestreams', authMiddleware(["seller"]), LivestreamController.createLivestream);

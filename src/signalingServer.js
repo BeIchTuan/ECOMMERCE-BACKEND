@@ -117,6 +117,8 @@ class SignalingServer {
 
   async handleStartStreaming(ws, data) {
     const { streamId } = data;
+    console.log(`Starting stream ${streamId}`);
+    
     const stream = await Livestream.findById(streamId);
     
     if (!stream || stream.streamer.toString() !== ws.user.id) {
@@ -124,28 +126,39 @@ class SignalingServer {
     }
 
     if (!this.rooms.has(streamId)) {
+      console.log(`Creating new room for stream ${streamId}`);
       this.rooms.set(streamId, new Map());
     }
     
     const room = this.rooms.get(streamId);
+    console.log(`Adding streamer ${ws.user.id} to room ${streamId}`);
+    
     room.set(ws.user.id, { 
       ws, 
       role: 'streamer',
-      connections: new Map() // Map để lưu RTCPeerConnection cho mỗi viewer
+      connections: new Map()
     });
+
+    ws.streamId = streamId; // Store streamId in ws for cleanup
 
     ws.send(JSON.stringify({
       type: 'stream-started',
       streamId,
       role: 'streamer'
     }));
+
+    console.log(`Stream ${streamId} started successfully`);
   }
 
   async handleJoinStream(ws, data) {
     const { streamId } = data;
+    console.log(`Attempting to join stream ${streamId}`);
     
     const stream = await Livestream.findById(streamId)
       .populate('streamer', 'name shopName avatar');
+    
+    console.log('Stream status:', stream?.status);
+    console.log('Active rooms:', Array.from(this.rooms.keys()));
     
     if (!stream || stream.status !== 'live') {
       throw new Error('Stream not found or not live');
@@ -153,9 +166,11 @@ class SignalingServer {
 
     const room = this.rooms.get(streamId);
     if (!room) {
+      console.log(`Room not found for stream ${streamId}`);
       throw new Error('Stream room not initialized');
     }
 
+    console.log(`Adding viewer ${ws.user.id} to room ${streamId}`);
     room.set(ws.user.id, { 
       ws, 
       role: 'viewer',
@@ -167,6 +182,7 @@ class SignalingServer {
       .find(([_, client]) => client.role === 'streamer');
 
     if (streamer) {
+      console.log(`Notifying streamer ${streamer[0]} about new viewer`);
       // Thông báo cho streamer về viewer mới
       streamer[1].ws.send(JSON.stringify({
         type: 'viewer-joined',
@@ -185,6 +201,8 @@ class SignalingServer {
           avatar: stream.streamer.avatar
         }
       }));
+    } else {
+      console.log(`No streamer found in room ${streamId}`);
     }
   }
 

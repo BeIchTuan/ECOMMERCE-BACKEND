@@ -51,7 +51,6 @@ class LivestreamController {
 
       const stream = await livestreamService.startLivestream(streamId, streamerId);
       
-      // Lấy token từ cookie hoặc header
       let token = req.cookies.accessToken || req.headers['authorization'];
       if (token && token.startsWith("Bearer ")) {
         token = token.slice(7);
@@ -94,10 +93,12 @@ class LivestreamController {
   async getStreamInfo(req, res) {
     try {
       const streamId = req.params.id;
-      const streamInfo = await livestreamService.getStreamInfo(streamId);
       
       // Nếu user yêu cầu join làm viewer
       if (req.query.join === 'true') {
+        // Join user vào stream và lấy thông tin stream
+        const streamInfo = await livestreamService.joinLivestream(streamId, req.id);
+        
         // Lấy token từ cookie hoặc header
         let token = req.cookies.accessToken || req.headers['authorization'];
         if (token && token.startsWith("Bearer ")) {
@@ -107,13 +108,16 @@ class LivestreamController {
         return res.status(200).json({
           status: 'success',
           data: {
-            ...streamInfo,
+            ...streamInfo.stream,
+            viewerCount: streamInfo.viewerCount,
             wsUrl: `ws://localhost:8081?token=${token}`,
             rtcConfig: streamInfo.rtcConfig
           }
         });
       }
 
+      // Nếu chỉ xem thông tin stream
+      const streamInfo = await livestreamService.getStreamInfo(streamId);
       return res.status(200).json({
         status: 'success',
         data: streamInfo

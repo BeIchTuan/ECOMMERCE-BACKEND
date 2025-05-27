@@ -32,13 +32,17 @@ const io = new SocketIOServer(server, {
   cors: {
     origin: "*",
     methods: ["GET", "POST"]
-  }
+  },
+  pingTimeout: 60000,
+  connectTimeout: 60000,
+  allowEIO3: true, // Enable Engine.IO v3 compatibility
+  transports: ['websocket', 'polling']
 });
 
 // Share io instance with socketServerLive
 setIO(io);
 
-const allowedOrigins = ["http://localhost:5173", "http://localhost:5174"];
+const allowedOrigins = ["http://localhost:5173", "http://localhost:5174", "http://localhost:3000"];
 
 // Sử dụng middleware cors
 app.use(

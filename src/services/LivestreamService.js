@@ -1,21 +1,13 @@
 const Livestream = require('../models/LivestreamModel');
 const User = require('../models/UserModel');
+const socketServer = require('../socketServerLive');
 
 class LivestreamService {
   constructor(io) {
     this.io = io;
     this.activeStreams = new Map(); // Store active stream sessions
     this.streamConfig = {
-      iceServers: [
-        { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'stun:stun1.l.google.com:19302' },
-        { urls: 'stun:stun2.l.google.com:19302' },
-        {
-          urls: 'turn:your-turn-server.com:3478',  // Thay thế bằng TURN server thật
-          username: 'username',  // Thay thế bằng credentials thật
-          credential: 'password'
-        }
-      ],
+      iceServers: [{ urls: ["stun:hk-turn1.xirsys.com"] }, { username: "UZZ9w3qLFalCB97klw3yrHKTkolYEAqeukuKiGqdqcYG63BqsCY-tKJL7sKCGCW_AAAAAGgyn3hiZWljaHR1YW4=", credential: "8606e89c-3922-11f0-aa13-0242ac120004", urls: ["turn:hk-turn1.xirsys.com:80?transport=udp", "turn:hk-turn1.xirsys.com:3478?transport=udp", "turn:hk-turn1.xirsys.com:80?transport=tcp", "turn:hk-turn1.xirsys.com:3478?transport=tcp", "turns:hk-turn1.xirsys.com:443?transport=tcp", "turns:hk-turn1.xirsys.com:5349?transport=tcp"] }],
       iceTransportPolicy: 'all',
       iceCandidatePoolSize: 10,
       bundlePolicy: 'max-bundle',
@@ -34,7 +26,7 @@ class LivestreamService {
   // Create a new livestream
   async createLivestream(streamData) {
     const { title, description, streamerId, products } = streamData;
-    
+
     // Verify streamer exists and is a seller
     const streamer = await User.findById(streamerId);
     if (!streamer || streamer.role !== 'seller') {
@@ -55,31 +47,54 @@ class LivestreamService {
 
   // Start a scheduled livestream
   async startLivestream(streamId, streamerId) {
-    const stream = await Livestream.findById(streamId);
-    if (!stream || stream.streamer.toString() !== streamerId) {
-      throw new Error('Stream not found or unauthorized');
+    try {
+      const stream = await Livestream.findById(streamId);
+      if (!stream) {
+        throw new Error('Stream not found');
+      }
+      
+      if (stream.streamer.toString() !== streamerId) {
+        throw new Error('Not authorized to start this stream');
+      }
+
+      // Allow restarting a stream if it's either scheduled or was live
+      if (stream.status !== 'scheduled' && stream.status !== 'live') {
+        throw new Error('Stream cannot be started in current status');
+      }
+
+      stream.status = 'live';
+      stream.startTime = new Date();
+      await stream.save();
+
+      console.log(`Initializing stream room for stream ${streamId}`);
+
+      // Initialize stream room with WebRTC config if not exists
+      if (!this.activeStreams.has(streamId)) {
+        const streamInfo = {
+          streamerId,
+          viewers: new Set(),
+          rtcConfig: this.streamConfig,
+          connections: new Map()
+        };
+        
+        this.activeStreams.set(streamId, streamInfo);
+        console.log(`Stream room initialized with config:`, {
+          streamId,
+          streamerId,
+          rtcConfig: this.streamConfig
+        });
+      }
+
+      // Notify through Socket.IO about stream start
+      const streamData = stream.toObject();
+      return {
+        ...streamData,
+        rtcConfig: this.streamConfig
+      };
+    } catch (error) {
+      console.error('Error in startLivestream:', error);
+      throw error;
     }
-
-    if (stream.status !== 'scheduled') {
-      throw new Error('Stream is not in scheduled status');
-    }
-
-    stream.status = 'live';
-    stream.startTime = new Date();
-    await stream.save();
-
-    // Initialize stream room with WebRTC config
-    this.activeStreams.set(streamId, {
-      streamerId,
-      viewers: new Set(),
-      rtcConfig: this.streamConfig,
-      connections: new Map()  // Store peer connections
-    });
-
-    return {
-      ...stream.toObject(),
-      rtcConfig: this.streamConfig
-    };
   }
 
   // End an existing livestream
@@ -96,9 +111,9 @@ class LivestreamService {
     // Cleanup stream and notify all connected peers
     if (this.activeStreams.has(streamId)) {
       const streamInfo = this.activeStreams.get(streamId);
-      
+
       // Notify all connected peers about stream end
-      this.io.to(streamId).emit('streamEnded', { 
+      this.io.to(streamId).emit('streamEnded', {
         streamId,
         message: 'Stream has ended'
       });
@@ -118,38 +133,94 @@ class LivestreamService {
 
   // Join livestream as viewer
   async joinLivestream(streamId, userId) {
-    const stream = await Livestream.findById(streamId)
-      .populate('streamer', 'name shopName avatar')
-      .populate('products', 'name price images');
+    try {
+      console.log(`Attempting to join stream ${streamId} for user ${userId}`);
+      
+      const stream = await Livestream.findById(streamId)
+        .populate('streamer', 'name shopName avatar')
+        .populate('products', 'name price images');
 
-    if (!stream || stream.status !== 'live') {
-      throw new Error('Stream not found or not live');
+      if (!stream) {
+        throw new Error('Stream not found');
+      }
+
+      if (stream.status !== 'live') {
+        throw new Error('Stream is not live');
+      }
+
+      // Get or create stream room
+      let streamInfo = this.activeStreams.get(streamId);
+      if (!streamInfo) {
+        console.log(`Creating new stream room for ${streamId}`);
+        streamInfo = {
+          streamerId: stream.streamer._id.toString(),
+          viewers: new Set(),
+          rtcConfig: this.streamConfig,
+          connections: new Map()
+        };
+        this.activeStreams.set(streamId, streamInfo);
+      }
+
+      // Add viewer if not already in the room
+      if (!streamInfo.viewers.has(userId)) {
+        console.log(`Adding viewer ${userId} to stream ${streamId}`);
+        streamInfo.viewers.add(userId);
+        
+        // Notify about new viewer through Socket.IO
+        const io = socketServer.getIO();
+        io.to(streamId).emit('viewerJoined', {
+          streamId,
+          userId,
+          viewerCount: streamInfo.viewers.size
+        });
+      }
+
+      console.log(`Stream ${streamId} current viewers:`, {
+        viewers: Array.from(streamInfo.viewers),
+        count: streamInfo.viewers.size
+      });
+
+      return {
+        stream: stream.toObject(),
+        rtcConfig: this.streamConfig,
+        viewerCount: streamInfo.viewers.size
+      };
+    } catch (error) {
+      console.error('Error in joinLivestream:', error);
+      throw error;
     }
-
-    if (!this.activeStreams.has(streamId)) {
-      throw new Error('Stream room not initialized');
-    }
-
-    const streamInfo = this.activeStreams.get(streamId);
-    streamInfo.viewers.add(userId);
-
-    return {
-      stream: stream.toObject(),
-      rtcConfig: this.streamConfig,
-      viewerCount: streamInfo.viewers.size
-    };
   }
 
   // Leave livestream
   async leaveLivestream(streamId, userId) {
-    if (this.activeStreams.has(streamId)) {
-      const streamInfo = this.activeStreams.get(streamId);
-      streamInfo.viewers.delete(userId);
-
-      const stream = await Livestream.findById(streamId);
-      if (stream) {
-        this.io.to(streamId).emit('viewerCount', streamInfo.viewers.size);
+    try {
+      console.log(`User ${userId} leaving stream ${streamId}`);
+      
+      if (!this.activeStreams.has(streamId)) {
+        console.log(`Stream ${streamId} not found in active streams`);
+        return;
       }
+
+      const streamInfo = this.activeStreams.get(streamId);
+      if (streamInfo.viewers.has(userId)) {
+        streamInfo.viewers.delete(userId);
+        console.log(`Removed viewer ${userId} from stream ${streamId}`);
+
+        // Notify about viewer left through Socket.IO
+        const io = socketServer.getIO();
+        io.to(streamId).emit('viewerLeft', {
+          streamId,
+          userId,
+          viewerCount: streamInfo.viewers.size
+        });
+
+        console.log(`Stream ${streamId} current viewers:`, {
+          viewers: Array.from(streamInfo.viewers),
+          count: streamInfo.viewers.size
+        });
+      }
+    } catch (error) {
+      console.error('Error in leaveLivestream:', error);
     }
   }
 
@@ -163,12 +234,21 @@ class LivestreamService {
       throw new Error('Stream not found');
     }
 
+    // Lấy thông tin từ activeStreams nếu có
     const streamInfo = this.activeStreams.get(streamId) || { viewers: new Set() };
+    const viewerCount = streamInfo.viewers ? streamInfo.viewers.size : 0;
+
+    console.log(`Stream ${streamId} current viewers:`, {
+      viewers: Array.from(streamInfo.viewers || []),
+      count: viewerCount
+    });
 
     return {
       ...stream.toObject(),
-      viewerCount: streamInfo.viewers.size,
-      isLive: stream.status === 'live'
+      viewerCount,
+      viewers: viewerCount, // Thêm field này để tương thích với frontend
+      isLive: stream.status === 'live',
+      rtcConfig: stream.status === 'live' ? this.streamConfig : null
     };
   }
 
