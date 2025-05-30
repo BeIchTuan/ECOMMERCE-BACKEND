@@ -95,6 +95,9 @@ class SignalingServer {
       case 'end-stream':
         await this.handleEndStream(ws, data);
         break;
+      case 'pin-product':
+        await this.handlePinProduct(ws, data);
+        break;
       case 'offer':
         await this.handleOffer(ws, data);
         break;
@@ -411,6 +414,45 @@ class SignalingServer {
     this.rooms.delete(streamId);
 
     console.log(`Stream ${streamId} ended successfully`);
+  }
+
+  async handlePinProduct(ws, data) {
+    const { streamId, productId } = data;
+    console.log(`Pinning product ${productId} in stream ${streamId}`);
+    
+    // Kiểm tra và lấy thông tin stream
+    const stream = await Livestream.findById(streamId)
+      .populate('products');
+    
+    if (!stream || stream.streamer.toString() !== ws.user.id) {
+      throw new Error('Unauthorized to pin product in this stream');
+    }
+
+    // Kiểm tra sản phẩm có trong danh sách products của stream không
+    if (!stream.products.some(p => p._id.toString() === productId)) {
+      throw new Error('Product is not in stream catalog');
+    }
+
+    // Cập nhật sản phẩm được ghim
+    stream.pinnedProduct = productId;
+    await stream.save();
+
+    // Lấy thông tin chi tiết của sản phẩm được ghim
+    const pinnedProduct = await stream.populate('pinnedProduct');
+
+    // Thông báo cho tất cả người xem về sản phẩm được ghim mới
+    const room = this.rooms.get(streamId);
+    if (room) {
+      room.forEach((client) => {
+        client.ws.send(JSON.stringify({
+          type: 'product-pinned',
+          streamId,
+          product: pinnedProduct.pinnedProduct
+        }));
+      });
+    }
+
+    console.log(`Product ${productId} pinned successfully in stream ${streamId}`);
   }
   
   listen(port, callback) {

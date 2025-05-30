@@ -14,6 +14,11 @@ const livestreamSchema = new Schema(
       type: Schema.Types.ObjectId,
       ref: 'Product'
     }],
+    pinnedProduct: {
+      type: Schema.Types.ObjectId,
+      ref: 'Product',
+      default: null
+    },
     status: {
       type: String,
       enum: ['scheduled', 'live', 'ended'],

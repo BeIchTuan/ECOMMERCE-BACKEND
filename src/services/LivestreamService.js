@@ -133,10 +133,10 @@ class LivestreamService {
   async joinLivestream(streamId, userId) {
     try {
       console.log(`Attempting to join stream ${streamId} for user ${userId}`);
-      
-      const stream = await Livestream.findById(streamId)
+        const stream = await Livestream.findById(streamId)
         .populate('streamer', 'name shopName avatar')
-        .populate('products', 'name price images');
+        .populate('products', 'name price images')
+        .populate('pinnedProduct', 'name price images');
 
       if (!stream) {
         throw new Error('Stream not found');
@@ -210,7 +210,8 @@ class LivestreamService {
   async getStreamInfo(streamId) {
     const stream = await Livestream.findById(streamId)
       .populate('streamer', 'name shopName avatar')
-      .populate('products', 'name price images');
+      .populate('products', 'name price images')
+      .populate('pinnedProduct', 'name price images');
 
     if (!stream) {
       throw new Error('Stream not found');
