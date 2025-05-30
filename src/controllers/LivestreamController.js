@@ -1,7 +1,6 @@
 const LivestreamService = require('../services/LivestreamService');
-const { io } = require('../socketServerLive');
 
-const livestreamService = new LivestreamService(io);
+const livestreamService = new LivestreamService();
 
 class LivestreamController {
   async getLivestreams(req, res) {

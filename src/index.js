@@ -14,7 +14,6 @@ const { Server: WebSocketServer } = require('ws');
 const { Server: SocketIOServer } = require('socket.io');
 const websocketServer = require('./websocketServer');
 const signalingServer = require('./signalingServer');
-const { setIO } = require('./socketServerLive');
 
 dotenv.config();
 app.use(morgan('combined'));
@@ -38,9 +37,6 @@ const io = new SocketIOServer(server, {
   allowEIO3: true, // Enable Engine.IO v3 compatibility
   transports: ['websocket', 'polling']
 });
-
-// Share io instance with socketServerLive
-setIO(io);
 
 const allowedOrigins = ["http://localhost:5173", "http://localhost:5174", "http://localhost:3000"];
 
@@ -74,7 +70,6 @@ mongoose.connect(process.env.MONGO_URI)
     console.log('Mongoose connected to MongoDB');
     server.listen(port, () => {
       console.log(`App listening on port ${port}`);
-      console.log('Socket.IO server is ready');
     });
     
     // Start signaling server on port 8081

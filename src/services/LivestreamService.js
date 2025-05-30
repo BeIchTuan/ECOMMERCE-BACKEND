@@ -1,10 +1,8 @@
 const Livestream = require('../models/LivestreamModel');
 const User = require('../models/UserModel');
-const socketServer = require('../socketServerLive');
 
 class LivestreamService {
-  constructor(io) {
-    this.io = io;
+  constructor() {
     this.activeStreams = new Map(); // Store active stream sessions
     this.streamConfig = {
       iceServers: [{ urls: ["stun:hk-turn1.xirsys.com"] }, { username: "UZZ9w3qLFalCB97klw3yrHKTkolYEAqeukuKiGqdqcYG63BqsCY-tKJL7sKCGCW_AAAAAGgyn3hiZWljaHR1YW4=", credential: "8606e89c-3922-11f0-aa13-0242ac120004", urls: ["turn:hk-turn1.xirsys.com:80?transport=udp", "turn:hk-turn1.xirsys.com:3478?transport=udp", "turn:hk-turn1.xirsys.com:80?transport=tcp", "turn:hk-turn1.xirsys.com:3478?transport=tcp", "turns:hk-turn1.xirsys.com:443?transport=tcp", "turns:hk-turn1.xirsys.com:5349?transport=tcp"] }],
@@ -165,14 +163,6 @@ class LivestreamService {
       if (!streamInfo.viewers.has(userId)) {
         console.log(`Adding viewer ${userId} to stream ${streamId}`);
         streamInfo.viewers.add(userId);
-        
-        // Notify about new viewer through Socket.IO
-        const io = socketServer.getIO();
-        io.to(streamId).emit('viewerJoined', {
-          streamId,
-          userId,
-          viewerCount: streamInfo.viewers.size
-        });
       }
 
       console.log(`Stream ${streamId} current viewers:`, {
@@ -205,14 +195,6 @@ class LivestreamService {
       if (streamInfo.viewers.has(userId)) {
         streamInfo.viewers.delete(userId);
         console.log(`Removed viewer ${userId} from stream ${streamId}`);
-
-        // Notify about viewer left through Socket.IO
-        const io = socketServer.getIO();
-        io.to(streamId).emit('viewerLeft', {
-          streamId,
-          userId,
-          viewerCount: streamInfo.viewers.size
-        });
 
         console.log(`Stream ${streamId} current viewers:`, {
           viewers: Array.from(streamInfo.viewers),
