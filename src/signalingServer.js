@@ -92,6 +92,9 @@ class SignalingServer {
       case 'start-streaming':
         await this.handleStartStreaming(ws, data);
         break;
+      case 'end-stream':
+        await this.handleEndStream(ws, data);
+        break;
       case 'offer':
         await this.handleOffer(ws, data);
         break;
@@ -365,6 +368,51 @@ class SignalingServer {
     }
   }
 
+  async handleEndStream(ws, data) {
+    const { streamId } = data;
+    console.log(`Ending stream ${streamId}`);
+    
+    const stream = await Livestream.findById(streamId);
+    
+    if (!stream || stream.streamer.toString() !== ws.user.id) {
+      throw new Error('Unauthorized to end this stream');
+    }
+
+    const room = this.rooms.get(streamId);
+    if (!room) {
+      throw new Error('Stream room not found');
+    }
+
+    // Thông báo cho tất cả viewers về việc stream kết thúc
+    room.forEach((client) => {
+        client.ws.send(JSON.stringify({
+          type: 'stream-ended',
+          streamId,
+          message: 'Stream has been ended by the streamer'
+        }));
+    });
+
+    // // Cập nhật trạng thái stream trong database
+    // stream.status = 'ended';
+    // stream.endTime = new Date();
+    // await stream.save();
+
+    await Livestream.deleteOne({_id: streamId});
+
+    // Đóng tất cả connections và xóa room
+    room.forEach((client) => {
+      client.connections.forEach((conn) => {
+        if (conn.peerConnection) {
+          conn.peerConnection.close();
+        }
+      });
+    });
+
+    this.rooms.delete(streamId);
+
+    console.log(`Stream ${streamId} ended successfully`);
+  }
+  
   listen(port, callback) {
     this.server.listen(port, callback);
   }
