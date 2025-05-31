@@ -10,8 +10,8 @@ const addressSchema = new mongoose.Schema({
 
 const userSchema = new Schema(
   {
-    email: { type: String},
-    password: { type: String},
+    email: { type: String },
+    password: { type: String },
     name: { type: String, required: false },
     avatar: { type: String },
     birthday: { type: Date },
@@ -30,6 +30,9 @@ const userSchema = new Schema(
     cart: { type: Schema.Types.ObjectId, ref: 'Cart' },
     favoriteProducts: [{ type: Schema.Types.ObjectId, ref: 'Product' }],
     order: { type: Schema.Types.ObjectId, ref: 'Order' },
+    fcmTokens: [{
+      type: String
+    }],
 
     // Fields specific to sellers
     shopName: {

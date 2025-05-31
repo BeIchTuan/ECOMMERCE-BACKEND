@@ -6,6 +6,7 @@ const User = require("../models/UserModel");
 const { sendOrderConfirmationEmail } = require("./EmailService");
 const MomoService = require("./MomoService");
 const momoConfig = require("../config/MomoConfig");
+const notificationService = require("./NotificationService");
 
 class OrderService {
   async getOrders(
@@ -61,13 +62,13 @@ class OrderService {
               return {
                 product: item.productId
                   ? {
-                      id: item.productId._id,
-                      name: item.productId.name,
-                      price: item.productId.price,
-                      priceAfterSale: item.productId.priceAfterSale,
-                      thumbnail: item.productId.thumbnail,
-                      rates,
-                    }
+                    id: item.productId._id,
+                    name: item.productId.name,
+                    price: item.productId.price,
+                    priceAfterSale: item.productId.priceAfterSale,
+                    thumbnail: item.productId.thumbnail,
+                    rates,
+                  }
                   : null,
                 quantity: item.quantity,
                 SKU: item.SKU,
@@ -270,20 +271,28 @@ class OrderService {
       // Gửi email xác nhận
       await sendOrderConfirmationEmail(orderResponse, customer.email);
 
-      return orderResponse;
+      const tokens = customer.fcmTokens?.filter(Boolean);
+      if (tokens?.length) {
+        const title = "Create Order Successful!";
+        const body = `You have successfully created an order: ${savedOrder.name}`;
+        const data = {
+          type: "order_creation",
+          orderId: savedOrder._id.toString(),
+        };
 
-      // return {
-      //   orderId: savedOrder._id,
-      //   orderDate: savedOrder.createdAt,
-      //   totalPrice: savedOrder.totalPrice,
-      //   paymentMethod: populatedOrder.paymentMethod.name,
-      //   deliveryMethod: populatedOrder.deliveryMethod.name,
-      //   shippingCost: savedOrder.shippingCost,
-      //   deliveryStatus: savedOrder.deliveryStatus,
-      //   paymentStatus: savedOrder.paymentStatus,
-      //   address: savedOrder.address,
-      //   items: responseItems,
-      // };
+        await notificationService.sendNotification(tokens, title, body, data);
+
+        // Lưu thông báo vào cơ sở dữ liệu
+        await notificationService.saveNotification(
+          customer._id,
+          "order_creation",
+          title,
+          body,
+          data
+        );
+      }
+
+      return orderResponse;
     } catch (error) {
       return {
         status: 500,
@@ -424,21 +433,21 @@ class OrderService {
           description: item.productId ? item.productId.description : null,
           SKU: item.productId
             ? item.productId.SKU.map((sku) => ({
-                name: sku.name,
-                classifications: sku.classifications.map(
-                  (classification) => classification
-                ),
-                _id: sku._id,
-              }))
+              name: sku.name,
+              classifications: sku.classifications.map(
+                (classification) => classification
+              ),
+              _id: sku._id,
+            }))
             : null,
           price: item.productId ? item.productId.price : null,
           salePercent: item.productId ? item.productId.salePercent : null,
           priceAfterSale: item.productId ? item.productId.priceAfterSale : null,
           category: item.productId
             ? item.productId.category.map((cat) => ({
-                id: cat._id,
-                name: cat.name,
-              }))
+              id: cat._id,
+              name: cat.name,
+            }))
             : null,
           thumbnail: item.productId ? item.productId.thumbnail : null,
           quantity: item.quantity,
@@ -609,7 +618,7 @@ class OrderService {
       for (const order of orders) {
         // Tính tổng giá trị các sản phẩm của người bán trong đơn hàng này
         let orderRevenue = 0;
-        const sellerItems = order.items.filter(item => 
+        const sellerItems = order.items.filter(item =>
           item.sellerId.toString() === sellerId.toString()
         );
 
