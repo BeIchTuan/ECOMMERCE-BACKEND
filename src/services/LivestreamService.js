@@ -50,7 +50,7 @@ class LivestreamService {
       if (!stream) {
         throw new Error('Stream not found');
       }
-      
+
       if (stream.streamer.toString() !== streamerId) {
         throw new Error('Not authorized to start this stream');
       }
@@ -74,7 +74,7 @@ class LivestreamService {
           rtcConfig: this.streamConfig,
           connections: new Map()
         };
-        
+
         this.activeStreams.set(streamId, streamInfo);
         console.log(`Stream room initialized with config:`, {
           streamId,
@@ -133,10 +133,10 @@ class LivestreamService {
   async joinLivestream(streamId, userId) {
     try {
       console.log(`Attempting to join stream ${streamId} for user ${userId}`);
-        const stream = await Livestream.findById(streamId)
+      const stream = await Livestream.findById(streamId)
         .populate('streamer', 'name shopName avatar')
-        .populate('products', 'name price images')
-        .populate('pinnedProduct', 'name price images');
+        .populate('products', 'name price image')
+        .populate('pinnedProduct', 'name description SKU price category inStock image seller sold averageStar rateCount priceAfterSale salePercent isDeleted thumbnail rates');
 
       if (!stream) {
         throw new Error('Stream not found');
@@ -185,7 +185,7 @@ class LivestreamService {
   async leaveLivestream(streamId, userId) {
     try {
       console.log(`User ${userId} leaving stream ${streamId}`);
-      
+
       if (!this.activeStreams.has(streamId)) {
         console.log(`Stream ${streamId} not found in active streams`);
         return;
@@ -210,8 +210,8 @@ class LivestreamService {
   async getStreamInfo(streamId) {
     const stream = await Livestream.findById(streamId)
       .populate('streamer', 'name shopName avatar')
-      .populate('products', 'name price images')
-      .populate('pinnedProduct', 'name price images');
+      .populate('products', 'name price image')
+      .populate('pinnedProduct', 'name description SKU price category inStock image seller sold averageStar rateCount priceAfterSale salePercent isDeleted thumbnail rates');
 
     if (!stream) {
       throw new Error('Stream not found');
