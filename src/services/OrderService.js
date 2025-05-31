@@ -265,13 +265,18 @@ class OrderService {
       };
 
       // Lấy email khách hàng từ database
-      const customer = await User.findById(userId).select("email");
+      const customer = await User.findById(userId).select("email fcmTokens");
       if (!customer) throw new Error("Customer not found");
+
+      console.log("customer", customer);
 
       // Gửi email xác nhận
       await sendOrderConfirmationEmail(orderResponse, customer.email);
 
       const tokens = customer.fcmTokens?.filter(Boolean);
+
+      console.log("tokens", tokens);
+
       if (tokens?.length) {
         const title = "Create Order Successful!";
         const body = `You have successfully created an order: ${savedOrder.name}`;
@@ -279,6 +284,8 @@ class OrderService {
           type: "order_creation",
           orderId: savedOrder._id.toString(),
         };
+
+        console.log("data", data);
 
         await notificationService.sendNotification(tokens, title, body, data);
 
