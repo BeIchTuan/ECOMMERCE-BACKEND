@@ -13,12 +13,26 @@ class LivestreamService {
       sdpSemantics: 'unified-plan'
     };
   }
-
   // Get all active livestreams
   async getAllLivestreams() {
-    return await Livestream.find({ status: 'live' })
+    const streams = await Livestream.find({ status: 'live' })
       .populate('streamer', 'name shopName avatar')
-      .populate('products', 'name price images');
+      .populate('products', 'name price image')
+      .populate('pinnedProduct', 'name description SKU price category inStock image seller sold averageStar rateCount priceAfterSale salePercent isDeleted thumbnail rates');
+
+    // Thêm số lượng người xem cho mỗi stream
+    const streamsWithViewers = streams.map(stream => {
+      const streamInfo = this.activeStreams.get(stream._id.toString());
+      const viewerCount = streamInfo ? streamInfo.viewers.size : 0;
+      
+      return {
+        ...stream.toObject(),
+        viewerCount,
+        viewers: viewerCount 
+      };
+    });
+
+    return streamsWithViewers;
   }
 
   // Create a new livestream
